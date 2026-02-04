@@ -15,7 +15,7 @@ import {
 
 export const useConnectionStore = defineStore("connection", {
   state: () => ({
-    currentState: "disabled" as "disabled" | "scanning" | "connected",
+    currentState: "connected" as "disabled" | "scanning" | "connected",
     adapterState: "Unknown" as AdapterState,
     scanning: false,
     connected: false,
