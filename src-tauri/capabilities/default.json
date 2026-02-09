@@ -11,7 +11,7 @@
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
-    "blec:allow-scan",
-    "blec:default"
+    "serialplugin:default",
+    "serialplugin:allow-available-ports"
   ]
 }

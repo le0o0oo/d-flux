@@ -1,8 +1,8 @@
 import { shallowRef } from "vue";
 import type { Component } from "vue";
-import MainDash from "@/components/views/MainDash.vue";
+import AnalyzeView from "@/components/views/AnalyzeView/AnalyzeView.vue";
 
-export const currentView = shallowRef<Component>(MainDash);
+export const currentView = shallowRef<Component>(AnalyzeView);
 
 export function setView(view: Component) {
   currentView.value = view;

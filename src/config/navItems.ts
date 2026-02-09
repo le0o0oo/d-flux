@@ -1,7 +1,8 @@
 import type { Component } from "vue";
 
-import MainDash from "@/components/views/MainDash.vue";
 import CO2Monitor from "@/components/views/CO2Monitor.vue";
+import AnalyzeView from "@/components/views/AnalyzeView/AnalyzeView.vue";
+import Console from "@/components/views/Console.vue";
 
 interface NavItem {
   title: string;
@@ -12,13 +13,13 @@ interface NavItem {
 
 export default [
   {
-    title: "Dashboard",
-    icon: "lucide:gauge",
-    component: MainDash,
+    title: "Analyze",
+    icon: "lucide:chart-spline",
+    component: AnalyzeView,
   },
   {
-    title: "CO2 Monitor",
-    icon: "material-symbols:co2-rounded",
-    component: CO2Monitor,
+    title: "Console",
+    icon: "lucide:terminal",
+    component: Console,
   },
 ] as NavItem[];
