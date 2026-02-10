@@ -28,7 +28,16 @@ export class SerialService {
       // Start listening for data
       await this.port.startListening();
       this.stopListening = await this.port.listen((data: string) => {
-        this.handleData(data);
+        if (typeof data !== "string") {
+          this.handleTransportFailure(new Error("Received invalid serial payload type"));
+          return;
+        }
+
+        try {
+          this.handleData(data);
+        } catch (error) {
+          this.handleTransportFailure(error);
+        }
       });
 
       this.emit('connected');
@@ -72,7 +81,12 @@ export class SerialService {
     if (!this.port) {
       throw new Error("SerialService: Not connected");
     }
-    await this.port.write(data);
+    try {
+      await this.port.write(data);
+    } catch (error) {
+      this.handleTransportFailure(error);
+      throw error;
+    }
   }
 
   /**
@@ -127,6 +141,13 @@ export class SerialService {
         console.error(`Error in serial listener for ${event}:`, err);
       }
     });
+  }
+
+  private handleTransportFailure(error: unknown): void {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    console.error("Serial transport failure:", normalizedError);
+    this.emit("error", normalizedError);
+    void this.disconnect();
   }
 
   /**

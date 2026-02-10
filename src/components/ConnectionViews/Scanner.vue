@@ -45,13 +45,13 @@ const hasDevices = computed(() => devices.value.length > 0);
 // Functions
 async function runScan() {
   if (scanning.value) return;
-  
+
   scanning.value = true;
   scanProgress.value = [];
-  
+
   try {
     const devicesData = await detectHC05(
-      { timeoutMs: 1500 }, 
+      { timeoutMs: 1500 },
       (progress) => {
         const existingIndex = scanProgress.value.findIndex(p => p.port === progress.port);
         if (existingIndex >= 0) {
@@ -61,7 +61,7 @@ async function runScan() {
         }
       }
     );
-    
+
     devices.value = devicesData;
     lastScanTime.value = new Date();
   } catch (error) {
@@ -74,7 +74,7 @@ async function runScan() {
 function startContinuousScan() {
   autoScanEnabled.value = true;
   runScan();
-  
+
   // Run scan every 5 seconds
   scanInterval.value = window.setInterval(() => {
     if (autoScanEnabled.value) {
@@ -126,11 +126,7 @@ onUnmounted(() => {
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <Icon 
-            icon="lucide:radar" 
-            class="w-5 h-5 text-primary"
-            :class="{ 'opacity-70': scanning }"
-          />
+          <Icon icon="lucide:radar" class="w-5 h-5 text-primary" :class="{ 'opacity-70': scanning }" />
           <div>
             <h3 class="text-sm font-medium">
               {{ scanning ? 'Scansione in corso...' : 'Scansione dispositivi' }}
@@ -148,32 +144,19 @@ onUnmounted(() => {
             </p>
           </div>
         </div>
-        
+
         <div class="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            @click="runScan"
-            :disabled="scanning"
-          >
+          <Button variant="outline" size="sm" @click="runScan" :disabled="scanning">
             <Icon icon="lucide:refresh-cw" :class="{ 'animate-spin': scanning }" class="w-4 h-4 mr-2" />
             Aggiorna
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            @click="toggleAutoScan"
-            :class="{ 'bg-primary/10': autoScanEnabled }"
-          >
-            <Icon 
-              :icon="autoScanEnabled ? 'lucide:pause' : 'lucide:play'" 
-              class="w-4 h-4 mr-2" 
-            />
+          <Button variant="outline" size="sm" @click="toggleAutoScan" :class="{ 'bg-primary/10': autoScanEnabled }">
+            <Icon :icon="autoScanEnabled ? 'lucide:pause' : 'lucide:play'" class="w-4 h-4 mr-2" />
             {{ autoScanEnabled ? 'Pausa' : 'Auto' }}
           </Button>
         </div>
       </div>
-      
+
       <!-- Progress Bar (only show when no devices yet) -->
       <div v-if="scanning && !hasDevices" class="space-y-2">
         <Progress :model-value="progressPercentage" class="h-1.5" />
@@ -206,12 +189,7 @@ onUnmounted(() => {
             Assicurati che i dispositivi HC-05 siano accesi e nel raggio d'azione
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm"
-          @click="runScan"
-          class="mt-2"
-        >
+        <Button variant="outline" size="sm" @click="runScan" class="mt-2">
           <Icon icon="lucide:refresh-cw" class="w-4 h-4 mr-2" />
           Riprova
         </Button>
@@ -219,20 +197,13 @@ onUnmounted(() => {
 
       <!-- Devices Grid -->
       <div v-else class="grid grid-cols-2 gap-2">
-        <Card 
-          v-for="device in devices" 
-          :key="device.port"
-          class="group cursor-pointer transition-colors hover:border-primary/50"
-          @click="handleDeviceSelect(device)"
-        >
+        <Card v-for="device in devices" :key="device.port"
+          class="group cursor-pointer transition-colors hover:border-primary/50" @click="handleDeviceSelect(device)">
           <CardHeader class="p-3 pb-2">
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-2 flex-1 min-w-0">
                 <div class="bg-primary/10 rounded-md p-1.5 shrink-0">
-                  <Icon 
-                    :icon="getDeviceIcon(device)" 
-                    class="w-4 h-4 text-primary" 
-                  />
+                  <Icon :icon="getDeviceIcon(device)" class="w-4 h-4 text-primary" />
                 </div>
                 <div class="flex-1 min-w-0">
                   <CardTitle class="text-sm truncate">
@@ -243,10 +214,8 @@ onUnmounted(() => {
                   </CardDescription>
                 </div>
               </div>
-              <Icon 
-                icon="lucide:chevron-right" 
-                class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" 
-              />
+              <Icon icon="lucide:chevron-right"
+                class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
             </div>
           </CardHeader>
           <CardContent class="p-3 pt-0">
@@ -269,10 +238,8 @@ onUnmounted(() => {
       </div>
 
       <!-- Scanning Overlay for Existing Devices -->
-      <div 
-        v-if="scanning && hasDevices" 
-        class="sticky bottom-0 left-0 right-0 bg-background/90 backdrop-blur-sm border-t py-2"
-      >
+      <div v-if="scanning && hasDevices"
+        class="sticky bottom-0 left-0 right-0 bg-background/90 backdrop-blur-sm border-t py-2">
         <div class="flex items-center gap-2 text-xs text-muted-foreground">
           <Spinner class="w-3 h-3" />
           <span>Aggiornamento in corso...</span>

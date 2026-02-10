@@ -1,121 +1,167 @@
 <script setup lang="ts">
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from '@/components/ui/button'
 import { Spinner } from "@/components/ui/spinner";
 import { Icon } from "@iconify/vue";
 import { computed, ref, watch } from "vue";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useMeasurementStore } from "@/stores/measurementStore";
+import { useAppStore } from "@/stores/appStore";
 import { serialService } from "@/services/SerialService";
 import { SerialCommandType } from "@/services/ProtocolParser";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const props = withDefaults(defineProps<{
+  collapsed?: boolean;
+}>(), {
+  collapsed: false,
+});
 
 const measurementStore = useMeasurementStore();
 const connectionStore = useConnectionStore();
-const scanActive = ref(measurementStore.isAcquiring);
-
-// const canToggleScan = computed(() => connectionStore.status === "connected" && !!connectionStore.currentConnection);
+const appStore = useAppStore();
+const scanActive = ref<boolean>(measurementStore.isAcquiring);
+watch(
+  () => measurementStore.isAcquiring,
+  (next) => {
+    scanActive.value = next;
+  },
+  { immediate: true }
+);
+const disconnectDetails = computed(() => {
+  if (!connectionStore.lastDisconnectAt) return null;
+  return new Date(connectionStore.lastDisconnectAt).toLocaleTimeString();
+});
+const isConnected = computed(() => connectionStore.status === "connected" && !!connectionStore.currentDevice);
+const isConnecting = computed(() => connectionStore.status === "connecting");
+const isError = computed(() => connectionStore.status === "error");
+const canOpenConnectMenu = computed(() => !isConnected.value && !isConnecting.value);
+const statusTitle = computed(() => {
+  if (isConnected.value) {
+    return connectionStore.currentDevice?.name || "Dispositivo connesso";
+  }
+  if (isConnecting.value) return "Connessione in corso";
+  if (isError.value) return "Connessione fallita";
+  if (connectionStore.lastDisconnectMessage) return connectionStore.lastDisconnectMessage;
+  return "Nessun dispositivo";
+});
+const statusSubtitle = computed(() => {
+  if (isConnected.value) {
+    return connectionStore.currentDevice?.port || "";
+  }
+  if (isConnecting.value) return connectionStore.currentDevice?.port || "Attendi...";
+  if (isError.value) return connectionStore.lastError || "Errore sconosciuto";
+  if (connectionStore.lastDisconnectMessage && disconnectDetails.value) {
+    return `Disconnesso alle ${disconnectDetails.value}`;
+  }
+  return "Apri menu connessione";
+});
+const statusIcon = computed(() => {
+  if (isConnected.value) return "lucide:bluetooth-connected";
+  if (isConnecting.value) return "lucide:loader-circle";
+  if (isError.value || connectionStore.lastDisconnectMessage) return "lucide:triangle-alert";
+  return "lucide:bluetooth-off";
+});
+const statusToneClass = computed(() => {
+  if (isConnected.value) return "text-emerald-600";
+  if (isConnecting.value) return "text-primary";
+  if (isError.value || connectionStore.lastDisconnectMessage) return "text-destructive";
+  return "text-muted-foreground";
+});
 
 
 async function toggleScan(): Promise<void> {
   if (!serialService.isConnected()) return;
+  const nextValue = !scanActive.value;
+  scanActive.value = nextValue;
 
   try {
     await connectionStore.sendCommand(
-      scanActive.value ? SerialCommandType.STOP_ACQUISITION : SerialCommandType.START_ACQUISITION
+      nextValue ? SerialCommandType.START_ACQUISITION : SerialCommandType.STOP_ACQUISITION
     );
-    scanActive.value = !scanActive.value;
   } catch (err) {
+    scanActive.value = !nextValue;
     console.error("Scan toggle error:", err);
+  }
+}
+
+function openConnectMenu() {
+  appStore.setScreen("connection");
+}
+
+function handleCollapsedClick() {
+  if (canOpenConnectMenu.value) {
+    openConnectMenu();
   }
 }
 </script>
 
 <template>
-  <div>
-    <Card class="gap-2 py-4 shadow-none w-full">
-      <CardHeader class="px-4 pb-3">
-        <CardTitle class="text-sm"> Stato di connessione </CardTitle>
-        <CardDescription class="text-xs">
-          Stato della connessione Bluetooth
-        </CardDescription>
-      </CardHeader>
-      <CardContent class="px-4 pt-0">
-        <div class="space-y-3">
-          <!-- Current Connection Status -->
-          <div v-if="connectionStore.status === 'connected' && connectionStore.currentDevice"
-            class="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <div class="bg-green-500/10 rounded-lg p-2">
-              <Icon icon="lucide:bluetooth-connected" class="w-4 h-4 text-green-600" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium">
-                {{ connectionStore.currentDevice.name || 'Dispositivo connesso' }}
-              </p>
-              <p class="text-xs text-muted-foreground truncate">
-                {{ connectionStore.currentDevice.port }}
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" @click="connectionStore.disconnect()">
-              <Icon icon="lucide:x" class="w-4 h-4" />
-            </Button>
-          </div>
+  <div class="w-full">
+    <TooltipProvider v-if="props.collapsed">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            type="button"
+            class="size-8 rounded-md border border-sidebar-border bg-sidebar-accent/40 flex items-center justify-center transition-colors hover:bg-sidebar-accent"
+            :aria-label="statusTitle"
+            @click="handleCollapsedClick"
+          >
+            <Spinner v-if="isConnecting" class="size-4 text-primary" />
+            <Icon v-else :icon="statusIcon" class="size-4" :class="statusToneClass" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" class="max-w-56">
+          <p class="text-xs font-medium">{{ statusTitle }}</p>
+          <p class="text-xs text-muted-foreground">{{ statusSubtitle }}</p>
+          <p v-if="isConnected" class="text-xs mt-1" :class="scanActive ? 'text-emerald-600' : 'text-muted-foreground'">
+            {{ scanActive ? "Acquisizione attiva" : "Acquisizione ferma" }}
+          </p>
+          <p v-else class="text-xs mt-1 text-primary">Click per aprire menu connessione</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
 
-          <!-- Connecting State -->
-          <div v-else-if="connectionStore.status === 'connecting'"
-            class="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border-2 border-dashed">
-            <div class="bg-primary/10 rounded-lg p-2">
-              <Spinner class="w-4 h-4 text-primary" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium">
-                Connessione in corso{{ connectionStore.currentDevice?.name ? `: ${connectionStore.currentDevice.name}` :
-                  "" }}
-              </p>
-              <p class="text-xs text-muted-foreground truncate">
-                {{ connectionStore.currentDevice?.port || "Attendi..." }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Error State -->
-          <div v-else-if="connectionStore.status === 'error'"
-            class="flex items-center gap-3 p-3 bg-destructive/5 rounded-lg border border-destructive/20">
-            <div class="bg-destructive/10 rounded-lg p-2">
-              <Icon icon="lucide:triangle-alert" class="w-4 h-4 text-destructive" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium">Connessione fallita</p>
-              <p class="text-xs text-muted-foreground truncate">
-                {{ connectionStore.lastError || "Errore sconosciuto" }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Not Connected State -->
-          <div v-else class="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border-2 border-dashed">
-            <div class="bg-muted rounded-lg p-2">
-              <Icon icon="lucide:bluetooth-off" class="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div class="flex-1">
-              <p class="text-sm font-medium">Nessun dispositivo connesso</p>
-              <p class="text-xs text-muted-foreground">Cerca dispositivi nelle vicinanze</p>
-            </div>
-          </div>
-
-          <!-- Scan Button -->
-          <Button class="w-full" :variant="scanActive ? 'default' : 'outline'" :disabled="!serialService.isConnected()"
-            @click="toggleScan">
-            <Icon :icon="scanActive ? 'lucide:pause' : 'lucide:play'" class="w-4 h-4 mr-2" />
-            {{ scanActive ? "Ferma acquisizione" : "Avvia acquisizione" }}
-          </Button>
+    <div v-else class="w-full rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-2 space-y-2">
+      <div class="flex items-start gap-2">
+        <div class="size-7 rounded-md flex items-center justify-center bg-sidebar-accent">
+          <Spinner v-if="isConnecting" class="size-4 text-primary" />
+          <Icon v-else :icon="statusIcon" class="size-4" :class="statusToneClass" />
         </div>
-      </CardContent>
-    </Card>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-semibold leading-tight truncate">{{ statusTitle }}</p>
+          <p class="text-[11px] text-muted-foreground leading-tight truncate">{{ statusSubtitle }}</p>
+          <p v-if="isConnected" class="text-[11px] mt-1" :class="scanActive ? 'text-emerald-600' : 'text-muted-foreground'">
+            {{ scanActive ? "Acquisizione attiva" : "Acquisizione ferma" }}
+          </p>
+        </div>
+      </div>
+
+      <div v-if="canOpenConnectMenu" class="flex">
+        <Button class="w-full h-8 text-xs" variant="outline" @click="openConnectMenu">
+          <Icon icon="lucide:arrow-left" class="w-3.5 h-3.5 mr-1.5" />
+          Torna al menu connessione
+        </Button>
+      </div>
+
+      <div v-else class="flex gap-2">
+        <Button
+          class="flex-1 h-8 text-xs"
+          :variant="scanActive ? 'default' : 'outline'"
+          :disabled="!serialService.isConnected()"
+          @click="toggleScan"
+        >
+          <Icon :icon="scanActive ? 'lucide:pause' : 'lucide:play'" class="w-3.5 h-3.5 mr-1.5" />
+          {{ scanActive ? "Stop" : "Start" }}
+        </Button>
+        <Button
+          class="h-8 px-2 text-xs"
+          variant="outline"
+          :disabled="!serialService.isConnected()"
+          @click="connectionStore.disconnect()"
+        >
+          Disconnetti
+        </Button>
+      </div>
+    </div>
   </div>
 </template>

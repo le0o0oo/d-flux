@@ -1,17 +1,43 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { serialService } from "@/services/SerialService";
 import { ProtocolParser, SerialEventType, type SensorData } from "@/services/ProtocolParser";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { useSettingsStore } from "./settingsStore";
+import { saveMeasurementsCsv } from "@/services/measurementCsvService";
 
 export const useMeasurementStore = defineStore("measurement", () => {
   // State
   const data = ref<SensorData[]>([]);
+  const currentSessionData = ref<SensorData[]>([]);
   const isAcquiring = ref(false);
   const startTime = ref<number | null>(null);
+  const sensorName = ref("sensor");
+  const backupInProgress = ref(false);
 
-  // Actions
+  async function saveRowsToCsv(rows: SensorData[]) {
+    if (rows.length === 0) return null;
+
+    const settingsStore = useSettingsStore();
+    const saveFolderPath = settingsStore.saveFolderPath;
+    if (!saveFolderPath) {
+      console.warn("Save folder path is not configured");
+      return null;
+    }
+
+    try {
+      const filePath = await saveMeasurementsCsv({
+        rows,
+        sensorName: sensorName.value,
+        folderPath: saveFolderPath,
+      });
+      console.log("Saved measurements to", filePath);
+      return filePath;
+    } catch (err) {
+      console.error("Failed to save CSV:", err);
+      return null;
+    }
+  }
+
   function handleSerialData(rawLine: string) {
     const parsed = ProtocolParser.parseLine(rawLine);
     if (!parsed) return;
@@ -21,20 +47,40 @@ export const useMeasurementStore = defineStore("measurement", () => {
         const measurement = ProtocolParser.parseDataPayload(parsed.payload);
         if (measurement) {
           data.value.push(measurement);
+          if (isAcquiring.value) {
+            currentSessionData.value.push(measurement);
+          }
         }
         break;
 
       case SerialEventType.ACQUISITION_STATE:
+        const wasAcquiring = isAcquiring.value;
+        const nextIsAcquiring = parsed.payload === "1";
+
         // Payload is "1" (true) or "0" (false)
-        isAcquiring.value = parsed.payload === "1";
+        isAcquiring.value = nextIsAcquiring;
+
+        if (!wasAcquiring && nextIsAcquiring) {
+          currentSessionData.value = [];
+        }
+
         if (isAcquiring.value && !startTime.value) {
           startTime.value = Date.now();
         } else if (!isAcquiring.value) {
           startTime.value = null;
         }
+
+        if (wasAcquiring && !nextIsAcquiring) {
+          const rowsToSave = [...currentSessionData.value];
+          currentSessionData.value = [];
+          void saveRowsToCsv(rowsToSave);
+        }
         break;
         
       case SerialEventType.WHOIS:
+        if (parsed.payload?.trim()) {
+          sensorName.value = parsed.payload.trim();
+        }
         console.log("Device identified:", parsed.payload);
         break;
         
@@ -54,59 +100,51 @@ export const useMeasurementStore = defineStore("measurement", () => {
 
   function clearData() {
     data.value = [];
+    currentSessionData.value = [];
     startTime.value = null;
+  }
+
+  function setSensorName(name: string) {
+    if (!name?.trim()) return;
+    sensorName.value = name.trim();
   }
 
   /**
    * Exports the current data to a CSV file.
    */
   async function exportToCSV() {
-    if (data.value.length === 0) {
-      console.warn("No data to export");
-      return;
-    }
+    await saveRowsToCsv(data.value);
+  }
 
-    // 1. Generate CSV content
-    const headers = ["Timestamp", "Date", "CO2 (ppm)", "Temperature (C)", "Humidity (%)"];
-    const rows = data.value.map(row => {
-      const dateStr = new Date(row.timestamp).toISOString();
-      return [
-        row.timestamp,
-        dateStr,
-        row.co2 ?? "",
-        row.temperature ?? "",
-        row.humidity ?? ""
-      ].join(",");
-    });
-    
-    const csvContent = [headers.join(","), ...rows].join("\n");
+  async function backupOnDisconnect() {
+    if (backupInProgress.value) return null;
+    if (currentSessionData.value.length === 0) return null;
 
-    // 2. Open Save Dialog
+    backupInProgress.value = true;
+    const rowsToSave = [...currentSessionData.value];
+
     try {
-      const filePath = await save({
-        filters: [{
-          name: 'CSV File',
-          extensions: ['csv']
-        }],
-        defaultPath: 'measurements.csv'
-      });
-
+      const filePath = await saveRowsToCsv(rowsToSave);
       if (filePath) {
-        // 3. Write to file
-        await writeTextFile(filePath, csvContent);
-        console.log("Exported successfully to", filePath);
+        currentSessionData.value = [];
+        isAcquiring.value = false;
+        startTime.value = null;
       }
-    } catch (err) {
-      console.error("Failed to export CSV:", err);
+      return filePath;
+    } finally {
+      backupInProgress.value = false;
     }
   }
 
   return {
     data,
     isAcquiring,
+    sensorName,
     startListening,
     stopListening,
     clearData,
-    exportToCSV
+    exportToCSV,
+    setSensorName,
+    backupOnDisconnect,
   };
 });
