@@ -21,6 +21,7 @@ import {
 import { useSettingsStore } from "./stores/settingsStore";
 import { useAppStore } from "./stores/appStore";
 import type { BleDevice } from "@mnlphlp/plugin-blec";
+import { platform } from "@tauri-apps/plugin-os";
 
 const parentContainer = ref<HTMLElement | null>(null);
 
@@ -70,7 +71,7 @@ useColorMode();
 
 <template>
   <div class="size-full">
-    <TitleBar />
+    <TitleBar v-if="platform() != 'android' || platform() != 'ios'" />
     <Toaster />
     <div class="size-full pt-8">
       <DashboardView v-if="appStore.currentScreen === 'main'" />
@@ -85,15 +86,10 @@ useColorMode();
             </DialogContent>
           </Dialog>
 
-          <Scanner
-            @connect="handleConnect"
-            @open-settings="settingsOpen = true"
-          />
+          <Scanner @connect="handleConnect" @open-settings="settingsOpen = true" />
 
-          <div
-            v-if="connectionStore.isConnecting"
-            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md"
-          >
+          <div v-if="connectionStore.isConnecting"
+            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md">
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner class="w-4 h-4" />
               <span class="truncate max-w-[70vw]">
