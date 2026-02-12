@@ -1,7 +1,10 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { serialService } from "@/services/SerialService";
-import { ProtocolParser, SerialEventType, type SensorData } from "@/services/ProtocolParser";
+import {
+  ProtocolParser,
+  ProtocolEventType,
+  type SensorData,
+} from "@/services/ProtocolParser";
 import { useSettingsStore } from "./settingsStore";
 import { saveMeasurementsCsv } from "@/services/measurementCsvService";
 
@@ -38,12 +41,36 @@ export const useMeasurementStore = defineStore("measurement", () => {
     }
   }
 
-  function handleSerialData(rawLine: string) {
+  function applyAcquisitionState(nextIsAcquiring: boolean): SensorData[] {
+    const wasAcquiring = isAcquiring.value;
+    isAcquiring.value = nextIsAcquiring;
+
+    if (!wasAcquiring && nextIsAcquiring) {
+      currentSessionData.value = [];
+      startTime.value = Date.now();
+      return [];
+    }
+
+    if (wasAcquiring && !nextIsAcquiring) {
+      startTime.value = null;
+      const rowsToSave = [...currentSessionData.value];
+      currentSessionData.value = [];
+      return rowsToSave;
+    }
+
+    if (!nextIsAcquiring) {
+      startTime.value = null;
+    }
+
+    return [];
+  }
+
+  function handleIncomingLine(rawLine: string) {
     const parsed = ProtocolParser.parseLine(rawLine);
     if (!parsed) return;
 
     switch (parsed.type) {
-      case SerialEventType.DATA:
+      case ProtocolEventType.DATA:
         const measurement = ProtocolParser.parseDataPayload(parsed.payload);
         if (measurement) {
           data.value.push(measurement);
@@ -53,49 +80,40 @@ export const useMeasurementStore = defineStore("measurement", () => {
         }
         break;
 
-      case SerialEventType.ACQUISITION_STATE:
-        const wasAcquiring = isAcquiring.value;
-        const nextIsAcquiring = parsed.payload === "1";
-
-        // Payload is "1" (true) or "0" (false)
-        isAcquiring.value = nextIsAcquiring;
-
-        if (!wasAcquiring && nextIsAcquiring) {
-          currentSessionData.value = [];
-        }
-
-        if (isAcquiring.value && !startTime.value) {
-          startTime.value = Date.now();
-        } else if (!isAcquiring.value) {
-          startTime.value = null;
-        }
-
-        if (wasAcquiring && !nextIsAcquiring) {
-          const rowsToSave = [...currentSessionData.value];
-          currentSessionData.value = [];
-          void saveRowsToCsv(rowsToSave);
+      case ProtocolEventType.ACQUISITION_STATE:
+        {
+          const rowsToSave = applyAcquisitionState(parsed.payload === "1");
+          if (rowsToSave.length > 0) {
+            void saveRowsToCsv(rowsToSave);
+          }
         }
         break;
-        
-      case SerialEventType.WHOIS:
+
+      case ProtocolEventType.WHOIS:
         if (parsed.payload?.trim()) {
           sensorName.value = parsed.payload.trim();
         }
         console.log("Device identified:", parsed.payload);
         break;
-        
-      case SerialEventType.ERROR:
+
+      case ProtocolEventType.ERROR:
         console.error("Device reported error:", parsed.payload);
         break;
     }
   }
 
-  function startListening() {
-    serialService.on("data", handleSerialData);
+  function ingestLine(rawLine: string) {
+    handleIncomingLine(rawLine);
   }
 
-  function stopListening() {
-    serialService.off("data", handleSerialData);
+  function markAcquisitionStarted() {
+    applyAcquisitionState(true);
+  }
+
+  async function markAcquisitionStopped() {
+    const rowsToSave = applyAcquisitionState(false);
+    if (rowsToSave.length === 0) return null;
+    return await saveRowsToCsv(rowsToSave);
   }
 
   function clearData() {
@@ -113,7 +131,7 @@ export const useMeasurementStore = defineStore("measurement", () => {
    * Exports the current data to a CSV file.
    */
   async function exportToCSV() {
-    await saveRowsToCsv(data.value);
+    return await saveRowsToCsv(data.value);
   }
 
   async function backupOnDisconnect() {
@@ -140,11 +158,12 @@ export const useMeasurementStore = defineStore("measurement", () => {
     data,
     isAcquiring,
     sensorName,
-    startListening,
-    stopListening,
     clearData,
     exportToCSV,
     setSensorName,
     backupOnDisconnect,
+    ingestLine,
+    markAcquisitionStarted,
+    markAcquisitionStopped,
   };
 });

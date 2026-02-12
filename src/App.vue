@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import 'vue-sonner/style.css'
-import { Toaster } from '@/components/ui/sonner'
+import "vue-sonner/style.css";
+import { Toaster } from "@/components/ui/sonner";
 import TitleBar from "./components/TitleBar.vue";
 import { useColorMode } from "@vueuse/core";
 import autoAnimate from "@formkit/auto-animate";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import Scanner from "./components/ConnectionViews/Scanner.vue";
-import type { DeviceInfo } from "@/utils/connectionUtils";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { Spinner } from "@/components/ui/spinner";
-import { toast } from 'vue-sonner'
+import { toast } from "vue-sonner";
 import DashboardView from "./components/DashboardView.vue";
 import Settings from "@/components/views/Settings.vue";
 import {
@@ -19,40 +18,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useSettingsStore } from './stores/settingsStore';
-import { useAppStore } from './stores/appStore';
-
+import { useSettingsStore } from "./stores/settingsStore";
+import { useAppStore } from "./stores/appStore";
+import type { BleDevice } from "@mnlphlp/plugin-blec";
 
 const parentContainer = ref<HTMLElement | null>(null);
 
 const connectionStore = useConnectionStore();
 const measurementStore = useMeasurementStore();
-useSettingsStore()
+useSettingsStore();
 const appStore = useAppStore();
 const settingsOpen = ref(false);
 const lastSelectedDeviceKey = ref<string | null>(null);
 
 onMounted(async () => {
   if (parentContainer.value) autoAnimate(parentContainer.value);
-
-  // const devices = await detectHC05({ timeoutMs: 1500 }, (p) => {
-  //   console.log("progress: ", p);
-  // });
-  // console.log(devices);
-
 });
 
 onBeforeUnmount(async () => {
   await connectionStore.disconnect();
 });
 
-async function handleDeviceSelect(device: DeviceInfo) {
+async function handleConnect(device: BleDevice) {
   if (connectionStore.isConnecting) return;
 
-  console.log("Device selected:", device);
-  const selectedDeviceKey = `${device.port}|${device.id}`;
+  console.log("Connecting:", device);
+  const selectedDeviceKey = `${device.address}|${device.name ?? ""}`;
 
-  if (lastSelectedDeviceKey.value && lastSelectedDeviceKey.value !== selectedDeviceKey) {
+  if (
+    lastSelectedDeviceKey.value &&
+    lastSelectedDeviceKey.value !== selectedDeviceKey
+  ) {
     measurementStore.clearData();
     connectionStore.clearConsole();
   }
@@ -64,10 +60,9 @@ async function handleDeviceSelect(device: DeviceInfo) {
   } catch (err) {
     console.error("Connection error:", err);
     toast.error("Errore", {
-      description: err instanceof Error ? err.message : String(err)
+      description: err instanceof Error ? err.message : String(err),
     });
   }
-
 }
 
 useColorMode();
@@ -90,10 +85,15 @@ useColorMode();
             </DialogContent>
           </Dialog>
 
-          <Scanner @select-device="handleDeviceSelect" @open-settings="settingsOpen = true" />
+          <Scanner
+            @connect="handleConnect"
+            @open-settings="settingsOpen = true"
+          />
 
-          <div v-if="connectionStore.isConnecting"
-            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md">
+          <div
+            v-if="connectionStore.isConnecting"
+            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md"
+          >
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner class="w-4 h-4" />
               <span class="truncate max-w-[70vw]">

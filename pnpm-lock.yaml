@@ -11,6 +11,9 @@ importers:
       '@formkit/auto-animate':
         specifier: ^0.9.0
         version: 0.9.0
+      '@mnlphlp/plugin-blec':
+        specifier: ^0.8.0
+        version: 0.8.0
       '@tailwindcss/cli':
         specifier: ^4.1.18
         version: 4.1.18
@@ -62,9 +65,6 @@ importers:
       tauri-plugin-android-fs-api:
         specifier: 25.1.2
         version: 25.1.2
-      tauri-plugin-serialplugin-api:
-        specifier: ^2.21.1
-        version: 2.21.1
       vue:
         specifier: ^3.5.13
         version: 3.5.27(typescript@5.6.3)
@@ -413,6 +413,9 @@ packages:
   '@mapbox/whoots-js@3.1.0':
     resolution: {integrity: sha512-Es6WcD0nO5l+2BOQS4uLfNPYQaNDfbot3X1XUoloz+x0mPDS3eeORZJl06HXjwBG1fOGwCRnzK88LMdxKRrd6Q==}
     engines: {node: '>=6.0.0'}
+
+  '@mnlphlp/plugin-blec@0.8.0':
+    resolution: {integrity: sha512-KFcjgHkNi7poymIGbF+9VpmB2D9iEmPJKERiVaw2jDFO2dO5Om7kQ0JoYJZts59iT3qpNYUy8t5vtA6UOYcgFw==}
 
   '@parcel/watcher-android-arm64@2.5.6':
     resolution: {integrity: sha512-YQxSS34tPF/6ZG7r/Ih9xy+kP/WwediEUsqmtf0cuCV5TPPKw/PQHRhueUo6JdeFJaqV3pyjm0GdYjZotbRt/A==}
@@ -1701,9 +1704,6 @@ packages:
   tauri-plugin-android-fs-api@25.1.2:
     resolution: {integrity: sha512-QIrZ242GNQAukg7expziBntLAonult1i8EfNPwbvF4xLki9guJ631THD89Mxdkrd/ZQZ1ga+4XTCoGxq8K41Vw==}
 
-  tauri-plugin-serialplugin-api@2.21.1:
-    resolution: {integrity: sha512-V89gkiHmsjRXN000oSP+6Oiatsvt1EGJHjcS2c7+VLiSic+934UYWxKaZ3oG4s3zefajzKFLl3EjankRIaPHRQ==}
-
   three@0.135.0:
     resolution: {integrity: sha512-kuEpuuxRzLv0MDsXai9huCxOSQPZ4vje6y0gn80SRmQvgz6/+rI0NAvCRAw56zYaWKMGMfqKWsxF9Qa2Z9xymQ==}
 
@@ -2103,6 +2103,10 @@ snapshots:
       '@mapbox/point-geometry': 0.1.0
 
   '@mapbox/whoots-js@3.1.0': {}
+
+  '@mnlphlp/plugin-blec@0.8.0':
+    dependencies:
+      '@tauri-apps/api': 2.9.1
 
   '@parcel/watcher-android-arm64@2.5.6':
     optional: true
@@ -3419,10 +3423,6 @@ snapshots:
   tapable@2.3.0: {}
 
   tauri-plugin-android-fs-api@25.1.2:
-    dependencies:
-      '@tauri-apps/api': 2.9.1
-
-  tauri-plugin-serialplugin-api@2.21.1:
     dependencies:
       '@tauri-apps/api': 2.9.1
 

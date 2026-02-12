@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import { toast } from "vue-sonner";
-import { SerialCommandType } from "@/services/ProtocolParser";
+import { ProtocolCommandType } from "@/services/ProtocolParser";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,17 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const connectionStore = useConnectionStore();
 
 const sending = ref(false);
-const selectedCommand = ref<SerialCommandType>(SerialCommandType.GET_ACQUISITION_STATE);
+const selectedCommand = ref<ProtocolCommandType>(
+  ProtocolCommandType.GET_ACQUISITION_STATE
+);
 const commandPayload = ref("");
 const rawPayload = ref("");
 const appendNewlineMode = ref<"append" | "none">("append");
@@ -45,9 +42,9 @@ const consoleLines = computed(() => connectionStore.console ?? []);
 const isConnected = computed(() => connectionStore.isConnected);
 
 const commandOptions = [
-  SerialCommandType.START_ACQUISITION,
-  SerialCommandType.STOP_ACQUISITION,
-  SerialCommandType.GET_ACQUISITION_STATE,
+  ProtocolCommandType.START_ACQUISITION,
+  ProtocolCommandType.STOP_ACQUISITION,
+  ProtocolCommandType.GET_ACQUISITION_STATE,
 ];
 const appendNewline = computed(() => appendNewlineMode.value === "append");
 
@@ -78,7 +75,10 @@ async function sendSelectedCommand() {
   sending.value = true;
   try {
     const payload = commandPayload.value.trim();
-    await connectionStore.sendCommand(selectedCommand.value, payload || undefined);
+    await connectionStore.sendCommand(
+      selectedCommand.value,
+      payload || undefined
+    );
     // connectionStore.console.push(
     //   `TX: ${selectedCommand.value}${payload ? ` ${payload}` : ""}`
     // );
@@ -122,21 +122,35 @@ async function sendRawData() {
         <div class="space-y-1.5">
           <p class="text-xs text-muted-foreground">Command</p>
           <div class="grid gap-2">
-            <Select v-model="selectedCommand" :disabled="!isConnected || sending">
+            <Select
+              v-model="selectedCommand"
+              :disabled="!isConnected || sending"
+            >
               <SelectTrigger class="w-full">
                 <SelectValue placeholder="Select command" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="option in commandOptions" :key="option" :value="option">
+                <SelectItem
+                  v-for="option in commandOptions"
+                  :key="option"
+                  :value="option"
+                >
                   {{ option }}
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <Input v-model="commandPayload" :disabled="!isConnected || sending" placeholder="Optional payload"
-              @keydown.enter="sendSelectedCommand" />
-            <Button :disabled="!isConnected || sending" @click="sendSelectedCommand">
+            <Input
+              v-model="commandPayload"
+              :disabled="!isConnected || sending"
+              placeholder="Optional payload"
+              @keydown.enter="sendSelectedCommand"
+            />
+            <Button
+              :disabled="!isConnected || sending"
+              @click="sendSelectedCommand"
+            >
               Send
             </Button>
           </div>
@@ -144,10 +158,17 @@ async function sendRawData() {
 
         <div class="space-y-1.5">
           <p class="text-xs text-muted-foreground">Raw data</p>
-          <Input v-model="rawPayload" :disabled="!isConnected || sending" placeholder="e.g. CUSTOM_CMD foo=123"
-            @keydown.enter="sendRawData" />
+          <Input
+            v-model="rawPayload"
+            :disabled="!isConnected || sending"
+            placeholder="e.g. CUSTOM_CMD foo=123"
+            @keydown.enter="sendRawData"
+          />
           <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <Select v-model="appendNewlineMode" :disabled="!isConnected || sending">
+            <Select
+              v-model="appendNewlineMode"
+              :disabled="!isConnected || sending"
+            >
               <SelectTrigger class="w-full">
                 <SelectValue placeholder="Line ending" />
               </SelectTrigger>
@@ -167,23 +188,37 @@ async function sendRawData() {
     <Card class="border-muted/60">
       <CardHeader class="pb-2">
         <CardTitle class="flex items-center justify-between">
-          Serial Console
+          Device Console
           <div class="flex items-center gap-1.5">
-            <span class="text-xs text-muted-foreground">{{ consoleLines.length }} lines</span>
-            <Button variant="outline" size="sm" @click="connectionStore.clearConsole()">
+            <span class="text-xs text-muted-foreground"
+              >{{ consoleLines.length }} lines</span
+            >
+            <Button
+              variant="outline"
+              size="sm"
+              @click="connectionStore.clearConsole()"
+            >
               Clear
             </Button>
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent class="pt-0">
-        <div ref="logViewport"
-          class="h-[52svh] overflow-y-auto rounded-md border bg-muted/20 p-2.5 font-mono text-xs md:h-[62svh]">
+        <div
+          ref="logViewport"
+          class="h-[52svh] overflow-y-auto rounded-md border bg-muted/20 p-2.5 font-mono text-xs md:h-[62svh]"
+        >
           <div v-if="consoleLines.length === 0" class="text-muted-foreground">
             No messages yet. Connect a device and send a command.
           </div>
-          <div v-for="(line, index) in consoleLines" :key="`${index}-${line}`" class="flex gap-2 py-0.5">
-            <span class="w-8 shrink-0 text-right text-muted-foreground/80">{{ index + 1 }}</span>
+          <div
+            v-for="(line, index) in consoleLines"
+            :key="`${index}-${line}`"
+            class="flex gap-2 py-0.5"
+          >
+            <span class="w-8 shrink-0 text-right text-muted-foreground/80">{{
+              index + 1
+            }}</span>
             <span class="break-all" :class="lineClass(line)">
               {{ line }}
             </span>

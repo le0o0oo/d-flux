@@ -1,11 +1,11 @@
-export enum SerialEventType {
+export enum ProtocolEventType {
   WHOIS = "WHOIS",
   DATA = "DATA",
   ACQUISITION_STATE = "ACQUISITION_STATE",
   ERROR = "ERROR",
 }
 
-export enum SerialCommandType {
+export enum ProtocolCommandType {
   START_ACQUISITION = "START_ACQUISITION",
   STOP_ACQUISITION = "STOP_ACQUISITION",
   GET_ACQUISITION_STATE = "GET_ACQUISITION_STATE",
@@ -20,10 +20,12 @@ export interface SensorData {
 
 export class ProtocolParser {
   /**
-   * Parses a raw line from the serial port.
+   * Parses a raw line from the device protocol stream.
    * Expected format: "EVENT_TYPE PAYLOAD"
    */
-  static parseLine(line: string): { type: SerialEventType; payload: string } | null {
+  static parseLine(
+    line: string
+  ): { type: ProtocolEventType; payload: string } | null {
     const trimmed = line.trim();
     if (!trimmed) return null;
 
@@ -32,10 +34,12 @@ export class ProtocolParser {
     const payload = parts.slice(1).join(" ");
 
     // Basic validation of event type
-    if (Object.values(SerialEventType).includes(typeStr as SerialEventType)) {
-      return { type: typeStr as SerialEventType, payload };
+    if (
+      Object.values(ProtocolEventType).includes(typeStr as ProtocolEventType)
+    ) {
+      return { type: typeStr as ProtocolEventType, payload };
     }
-    
+
     console.warn(`Unknown event type received: ${typeStr}`);
     return null;
   }
