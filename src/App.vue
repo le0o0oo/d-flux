@@ -24,6 +24,7 @@ import type { BleDevice } from "@/services/transport";
 import { platform } from "@tauri-apps/plugin-os";
 import SetupFlow from "./components/setup/SetupFlow.vue";
 
+const scannerContainer = ref<HTMLElement | null>(null);
 const parentContainer = ref<HTMLElement | null>(null);
 
 const connectionStore = useConnectionStore();
@@ -34,6 +35,7 @@ const settingsOpen = ref(false);
 const lastSelectedDeviceKey = ref<string | null>(null);
 
 onMounted(async () => {
+  if (scannerContainer.value) autoAnimate(scannerContainer.value);
   if (parentContainer.value) autoAnimate(parentContainer.value);
 });
 
@@ -81,11 +83,11 @@ useColorMode();
   <div class="size-full">
     <TitleBar v-if="platform() != 'android' && platform() != 'ios'" />
     <Toaster />
-    <div class="size-full pt-8">
+    <div class="size-full pt-8" ref="parentContainer">
       <DashboardView v-if="appStore.currentScreen === 'main'" />
       <SetupFlow v-if="appStore.currentScreen === 'setup'" @done="doneSetup" />
       <div class="p-5" v-else>
-        <div class="relative">
+        <div class="relative" ref="scannerContainer">
           <Dialog v-model:open="settingsOpen">
             <DialogContent class="sm:max-w-lg p-0">
               <DialogHeader class="px-4 pt-4">
