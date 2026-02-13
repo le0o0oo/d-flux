@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
+//@ts-expect-error process is a nodejs global
 import path from "path";
 
 // @ts-expect-error process is a nodejs global
@@ -11,6 +12,7 @@ export default defineConfig(async () => ({
   plugins: [vue(), tailwindcss()],
   resolve: {
     alias: {
+      //@ts-expect-error
       "@": path.resolve(__dirname, "./src"),
     },
   },
@@ -23,7 +25,8 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    // host: host || false,
+    host: true,
     hmr: host
       ? {
           protocol: "ws",

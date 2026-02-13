@@ -32,6 +32,7 @@ export const useMeasurementStore = defineStore("measurement", () => {
         rows,
         sensorName: sensorName.value,
         folderPath: saveFolderPath,
+        folderUri: settingsStore.saveFolderUri,
       });
       console.log("Saved measurements to", filePath);
       return filePath;

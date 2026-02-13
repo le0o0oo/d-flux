@@ -20,6 +20,7 @@ import {
 import Settings from "@/components/views/Settings.vue";
 import { setView } from "@/lib/navigation";
 import { Icon } from "@iconify/vue";
+import config from "@/config/config";
 
 interface NavItem {
   title: string;
@@ -27,6 +28,10 @@ interface NavItem {
   component?: Component;
   items?: NavItem[];
 }
+
+const emit = defineEmits<{
+  select: [];
+}>();
 
 defineProps<{
   items: NavItem[];
@@ -48,6 +53,7 @@ function getIcon(iconName: string) {
 }
 
 function handleItemClick(item: NavItem) {
+  emit("select");
   if (item.component) {
     setView(item.component);
   }

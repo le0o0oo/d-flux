@@ -51,25 +51,25 @@ const canOpenConnectMenu = computed(
 );
 const statusTitle = computed(() => {
   if (isConnected.value) {
-    return connectionStore.currentDevice?.name || "Dispositivo connesso";
+    return connectionStore.currentDevice?.name || "Device connected";
   }
-  if (isConnecting.value) return "Connessione in corso";
-  if (isError.value) return "Connessione fallita";
+  if (isConnecting.value) return "Connecting...";
+  if (isError.value) return "Connection failed";
   if (connectionStore.lastDisconnectMessage)
     return connectionStore.lastDisconnectMessage;
-  return "Nessun dispositivo";
+  return "No device";
 });
 const statusSubtitle = computed(() => {
   if (isConnected.value) {
     return connectionStore.currentDevice?.port || "";
   }
   if (isConnecting.value)
-    return connectionStore.currentDevice?.port || "Attendi...";
-  if (isError.value) return connectionStore.lastError || "Errore sconosciuto";
+    return connectionStore.currentDevice?.port || "Waiting...";
+  if (isError.value) return connectionStore.lastError || "Unknown error";
   if (connectionStore.lastDisconnectMessage && disconnectDetails.value) {
-    return `Disconnesso alle ${disconnectDetails.value}`;
+    return `Disconnected at ${disconnectDetails.value}`;
   }
-  return "Apri menu connessione";
+  return "Open connection menu";
 });
 const statusIcon = computed(() => {
   if (isConnected.value) return "lucide:bluetooth-connected";
@@ -149,10 +149,10 @@ async function disconnect() {
             class="text-xs mt-1"
             :class="scanActive ? 'text-emerald-600' : 'text-muted-foreground'"
           >
-            {{ scanActive ? "Acquisizione attiva" : "Acquisizione ferma" }}
+            {{ scanActive ? "Acquisition active" : "Acquisition stopped" }}
           </p>
           <p v-else class="text-xs mt-1 text-primary">
-            Click per aprire menu connessione
+            Click to open connection menu
           </p>
         </TooltipContent>
       </Tooltip>
@@ -186,7 +186,7 @@ async function disconnect() {
             class="text-[11px] mt-1"
             :class="scanActive ? 'text-emerald-600' : 'text-muted-foreground'"
           >
-            {{ scanActive ? "Acquisizione attiva" : "Acquisizione ferma" }}
+            {{ scanActive ? "Acquisition active" : "Acquisition stopped" }}
           </p>
         </div>
       </div>
@@ -198,7 +198,7 @@ async function disconnect() {
           @click="openConnectMenu"
         >
           <Icon icon="lucide:arrow-left" class="w-3.5 h-3.5 mr-1.5" />
-          Torna al menu connessione
+          Back to connection menu
         </Button>
       </div>
 

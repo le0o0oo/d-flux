@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-export type AppScreen = "connection" | "main";
+export type AppScreen = "connection" | "main" | "setup";
 
 export const useAppStore = defineStore("app", () => {
   const currentScreen = ref<AppScreen>("connection");

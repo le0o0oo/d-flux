@@ -1,6 +1,5 @@
 import type { SensorData } from "@/services/ProtocolParser";
-import { exists, mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
-import { join } from "@tauri-apps/api/path";
+import { getFs } from "@/services/filesystem";
 
 type Stats = { avg: number | null; min: number | null; max: number | null };
 
@@ -13,13 +12,15 @@ function formatDatePart(timestamp: number) {
 }
 
 function sanitizeFilePart(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-_]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^[-_]+|[-_]+$/g, "") || "sensor";
+  return (
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-_]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^[-_]+|[-_]+$/g, "") || "sensor"
+  );
 }
 
 function formatStatValue(value: number | null) {
@@ -27,10 +28,16 @@ function formatStatValue(value: number | null) {
   return Number(value.toFixed(2));
 }
 
-function calculateStats(rows: SensorData[], picker: (row: SensorData) => number | undefined): Stats {
+function calculateStats(
+  rows: SensorData[],
+  picker: (row: SensorData) => number | undefined
+): Stats {
   const values = rows
     .map(picker)
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value)
+    );
   if (values.length === 0) {
     return { avg: null, min: null, max: null };
   }
@@ -67,7 +74,13 @@ function buildCsvContent(rows: SensorData[], sensorName: string) {
     ["Max Humidity (%)", formatStatValue(humidityStats.max)],
   ].map((row) => row.join(","));
 
-  const headers = ["Timestamp", "Date", "CO2 (ppm)", "Temperature (C)", "Humidity (%)"];
+  const headers = [
+    "Timestamp",
+    "Date",
+    "CO2 (ppm)",
+    "Temperature (C)",
+    "Humidity (%)",
+  ];
   const csvRows = rows.map((row) => {
     const dateStr = new Date(row.timestamp).toISOString();
     return [
@@ -82,35 +95,27 @@ function buildCsvContent(rows: SensorData[], sensorName: string) {
   return [...metadataRows, "", headers.join(","), ...csvRows].join("\n");
 }
 
-async function getNextCsvFilePath(folderPath: string, datePart: string, sensorPart: string) {
-  let index = 1;
-  while (true) {
-    const fileName = `${datePart}-${sensorPart}-${index}.csv`;
-    const filePath = await join(folderPath, fileName);
-    if (!(await exists(filePath))) {
-      return filePath;
-    }
-    index += 1;
-  }
-}
-
 export async function saveMeasurementsCsv(params: {
   rows: SensorData[];
   sensorName: string;
   folderPath: string;
+  folderUri?: import("tauri-plugin-android-fs-api").AndroidFsUri | null;
 }) {
-  const { rows, sensorName, folderPath } = params;
+  const { rows, sensorName, folderPath, folderUri } = params;
   if (rows.length === 0) return null;
   if (!folderPath) return null;
 
-  if (!(await exists(folderPath))) {
-    await mkdir(folderPath, { recursive: true });
-  }
-
   const datePart = formatDatePart(rows[0].timestamp || Date.now());
   const sensorPart = sanitizeFilePart(sensorName);
-  const filePath = await getNextCsvFilePath(folderPath, datePart, sensorPart);
+  const fileName = `${datePart}-${sensorPart}-1.csv`;
   const csvContent = buildCsvContent(rows, sensorName);
-  await writeTextFile(filePath, csvContent);
-  return filePath;
+
+  return getFs().saveTextFile({
+    folder: { path: folderPath, uri: folderUri ?? null },
+    fileName,
+    content: csvContent,
+    mimeType: "text/csv",
+    subfolder: "Measurements",
+    deduplicate: true,
+  });
 }

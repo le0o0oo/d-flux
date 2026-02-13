@@ -1,31 +1,32 @@
-// stores/counter.js
-import { defineStore } from 'pinia'
-import { useStorage } from '@vueuse/core'
-import { documentDir, join } from '@tauri-apps/api/path';
-import { exists, mkdir } from '@tauri-apps/plugin-fs';
+import { defineStore } from "pinia";
+import { useStorage } from "@vueuse/core";
+import { getFs, type AndroidFsUri } from "@/services/filesystem";
 
 const saveFolderPath = useStorage("saveFolderPath", "");
+const saveFolderUri = useStorage<AndroidFsUri | null>("saveFolderUri", null);
+const doneFirstSetup = useStorage("doneFirstSetup", false);
 
 async function init() {
-  if (!saveFolderPath.value || saveFolderPath.value === "" || !await exists(saveFolderPath.value)) {
-    const documentPath = await documentDir();
-    const savePath = await join(documentPath, "Measurements");
-    if (await exists(savePath)) return;
-
-    await mkdir(savePath)
-    saveFolderPath.value = savePath;
-  }
+  const folder = await getFs().initDefaultFolder({
+    path: saveFolderPath.value,
+    uri: saveFolderUri.value,
+  });
+  saveFolderPath.value = folder.path;
+  saveFolderUri.value = folder.uri;
 }
 
 init();
 
-export const useSettingsStore = defineStore('settings', {
+export const useSettingsStore = defineStore("settings", {
   state: () => ({
-    saveFolderPath: saveFolderPath
+    saveFolderPath: saveFolderPath,
+    saveFolderUri: saveFolderUri,
+    doneFirstSetup: doneFirstSetup,
   }),
   actions: {
-    setSaveFolderPath(path: string) {
+    setSaveFolderPath(path: string, uri: AndroidFsUri | null = null) {
       this.saveFolderPath = path;
-    }
+      this.saveFolderUri = uri;
+    },
   },
-})
+});

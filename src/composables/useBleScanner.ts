@@ -1,27 +1,15 @@
 import { computed, ref } from "vue";
-import { startScan } from "@mnlphlp/plugin-blec";
-import type { BleDevice as PluginBleDevice } from "@mnlphlp/plugin-blec";
 import config from "@/config/config";
+import { REQUIRED_SERVICE_UUID, normalizeUuid } from "@/services/bleConstants";
+import {
+  getScanner,
+  type BleDevice,
+  type ManufacturerDataMap,
+} from "@/services/transport";
 
-const REQUIRED_SERVICE_UUID = "db594551-159c-4da8-b59e-1c98587348e1";
+export type { BleDevice } from "@/services/transport";
+
 const SCAN_TIMEOUT_MS = 5000;
-const MOCK_SCAN_DELAY_MS = 350;
-
-type ManufacturerDataMap = Record<
-  string | number,
-  number[] | Uint8Array | undefined
->;
-
-export type BleDevice = PluginBleDevice & {
-  address?: string;
-  macAddress?: string;
-  deviceId?: string;
-  rssi?: number;
-  uuids?: string[];
-  serviceUuids?: string[];
-  services?: string[];
-  manufacturerData?: ManufacturerDataMap;
-};
 
 export type ParsedBleDevice = {
   key: string;
@@ -36,10 +24,6 @@ export type ParsedBleDevice = {
   };
 };
 
-function normalizeUuid(value: string): string {
-  return value.trim().toLowerCase();
-}
-
 function hasRequiredService(device: BleDevice): boolean {
   const candidates = [
     ...(device.serviceUuids ?? []),
@@ -51,7 +35,7 @@ function hasRequiredService(device: BleDevice): boolean {
 }
 
 function decodeManufacturerData(device: BleDevice): string {
-  const raw = device.manufacturerData;
+  const raw = device.manufacturerData as ManufacturerDataMap | undefined;
   if (!raw) return "";
 
   const bytes =
@@ -108,44 +92,10 @@ function getDeviceKey(device: BleDevice): string {
   return `${getDeviceAddress(device)}|${getDeviceName(device)}`;
 }
 
-function mockManufacturerData(metadata: string): ManufacturerDataMap {
-  return {
-    [config.manufacturerId]: Array.from(new TextEncoder().encode(metadata)),
-  };
-}
-
-function createMockDevices(): BleDevice[] {
-  return [
-    {
-      name: "Mock Sensor A",
-      address: "AA:BB:CC:DD:EE:01",
-      macAddress: "AA:BB:CC:DD:EE:01",
-      rssi: -58,
-      serviceUuids: [REQUIRED_SERVICE_UUID],
-      manufacturerData: mockManufacturerData("ID=MOCK_A;ORG=TestLab;FW=1.0.0"),
-      isBonded: false,
-    } as BleDevice,
-    {
-      name: "Mock Sensor B",
-      address: "AA:BB:CC:DD:EE:02",
-      macAddress: "AA:BB:CC:DD:EE:02",
-      rssi: -73,
-      serviceUuids: [REQUIRED_SERVICE_UUID],
-      manufacturerData: mockManufacturerData("ID=MOCK_B;ORG=TestLab;FW=1.1.0"),
-      isBonded: false,
-    } as BleDevice,
-  ];
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export function useBleScanner() {
   const scanning = ref(false);
   const scanResults = ref<BleDevice[]>([]);
   const lastScanTime = ref<Date | null>(null);
-  const isMockMode = import.meta.env.VITE_USE_MOCK === "true";
 
   const devices = computed<ParsedBleDevice[]>(() => {
     const strongestByKey = new Map<string, BleDevice>();
@@ -182,14 +132,7 @@ export function useBleScanner() {
     scanning.value = true;
 
     try {
-      if (isMockMode) {
-        await wait(MOCK_SCAN_DELAY_MS);
-        scanResults.value = createMockDevices();
-        lastScanTime.value = new Date();
-        return;
-      }
-
-      await startScan((devices: BleDevice[]) => {
+      await getScanner().scan((devices) => {
         scanResults.value = devices;
         lastScanTime.value = new Date();
       }, SCAN_TIMEOUT_MS);
@@ -203,7 +146,7 @@ export function useBleScanner() {
     devices,
     lastScanTime,
     runScan,
-    isMockMode,
+    isMockMode: config.isMockMode,
     requiredServiceUuid: REQUIRED_SERVICE_UUID,
   };
 }

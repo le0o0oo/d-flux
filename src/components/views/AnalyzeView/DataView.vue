@@ -2,7 +2,7 @@
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { Icon } from "@iconify/vue";
 import { Button } from "@/components/ui/button";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import DataTables from "./DataTables.vue";
@@ -23,13 +23,6 @@ const showCharts = ref<("co2" | "temperature" | "humidity")[]>([
   "humidity",
 ]);
 const activeTool = ref<undefined | "delete" | "linear_regression">(undefined);
-
-watch(showCharts, () => {
-  console.log(showCharts.value);
-});
-watch(activeTool, () => {
-  console.log(activeTool.value);
-});
 
 onMounted(() => {
   if (chartsContainer.value) autoAnimate(chartsContainer.value);
@@ -117,18 +110,12 @@ function deleteData() {
   );
   brushSelection.value = null;
   activeTool.value = undefined;
-  toast.success("Dati eliminati");
+  toast.success("Data cleared");
 }
 </script>
 
 <template>
   <div class="relative mb-16">
-    <div class="mb-3 flex items-center justify-end gap-2">
-      <Button variant="outline" @click="measurementStore.clearData">
-        Clear data
-      </Button>
-    </div>
-
     <div
       class="grid gap-4 sm:gap-6 md:grid-cols-1 xl:grid-cols-1 mt-2"
       ref="chartsContainer"
@@ -181,14 +168,14 @@ function deleteData() {
     </div>
 
     <div
-      class="fixed bottom-4 z-99 flex flex-col items-center gap-2 pointer-events-none left-1/2 -translate-x-1/2"
+      class="fixed bottom-4 z-20 flex flex-col items-center gap-2 pointer-events-none left-1/2 -translate-x-1/2"
     >
       <div class="z-999 pointer-events-auto">
         <Button
           variant="destructive"
           v-if="activeTool === 'delete'"
           @click="deleteData"
-          >Elimina dati</Button
+          >Delete data</Button
         >
       </div>
       <div

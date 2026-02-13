@@ -28,3 +28,4 @@ tauri-plugin-android-fs = { version = "=25.1.2", features = ["legacy_storage_per
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-blec = "0.8.1"
+tauri-plugin-geolocation = "2"

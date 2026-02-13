@@ -20,14 +20,15 @@ import {
 } from "@/components/ui/dialog";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useAppStore } from "./stores/appStore";
-import type { BleDevice } from "@mnlphlp/plugin-blec";
+import type { BleDevice } from "@/services/transport";
 import { platform } from "@tauri-apps/plugin-os";
+import SetupFlow from "./components/setup/SetupFlow.vue";
 
 const parentContainer = ref<HTMLElement | null>(null);
 
 const connectionStore = useConnectionStore();
 const measurementStore = useMeasurementStore();
-useSettingsStore();
+const settingsStore = useSettingsStore();
 const appStore = useAppStore();
 const settingsOpen = ref(false);
 const lastSelectedDeviceKey = ref<string | null>(null);
@@ -40,10 +41,13 @@ onBeforeUnmount(async () => {
   await connectionStore.disconnect();
 });
 
+if (platform() === "android" && !settingsStore.doneFirstSetup) {
+  appStore.setScreen("setup");
+}
+
 async function handleConnect(device: BleDevice) {
   if (connectionStore.isConnecting) return;
 
-  console.log("Connecting:", device);
   const selectedDeviceKey = `${device.address}|${device.name ?? ""}`;
 
   if (
@@ -59,11 +63,15 @@ async function handleConnect(device: BleDevice) {
     lastSelectedDeviceKey.value = selectedDeviceKey;
     appStore.setScreen("main");
   } catch (err) {
-    console.error("Connection error:", err);
-    toast.error("Errore", {
+    toast.error("Error", {
       description: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+function doneSetup() {
+  settingsStore.doneFirstSetup = true;
+  appStore.setScreen("connection");
 }
 
 useColorMode();
@@ -71,31 +79,37 @@ useColorMode();
 
 <template>
   <div class="size-full">
-    <TitleBar v-if="platform() != 'android' || platform() != 'ios'" />
+    <TitleBar v-if="platform() != 'android' && platform() != 'ios'" />
     <Toaster />
     <div class="size-full pt-8">
       <DashboardView v-if="appStore.currentScreen === 'main'" />
+      <SetupFlow v-if="appStore.currentScreen === 'setup'" @done="doneSetup" />
       <div class="p-5" v-else>
         <div class="relative">
           <Dialog v-model:open="settingsOpen">
             <DialogContent class="sm:max-w-lg p-0">
               <DialogHeader class="px-4 pt-4">
-                <DialogTitle>Impostazioni</DialogTitle>
+                <DialogTitle>Settings</DialogTitle>
               </DialogHeader>
               <Settings :show-title="false" />
             </DialogContent>
           </Dialog>
 
-          <Scanner @connect="handleConnect" @open-settings="settingsOpen = true" />
+          <Scanner
+            @connect="handleConnect"
+            @open-settings="settingsOpen = true"
+          />
 
-          <div v-if="connectionStore.isConnecting"
-            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md">
+          <div
+            v-if="connectionStore.isConnecting"
+            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md"
+          >
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner class="w-4 h-4" />
               <span class="truncate max-w-[70vw]">
-                Connessione{{
+                Connecting{{
                   connectionStore.currentDevice?.name
-                    ? ` a ${connectionStore.currentDevice.name}`
+                    ? ` to ${connectionStore.currentDevice.name}`
                     : ""
                 }}...
               </span>
@@ -106,25 +120,3 @@ useColorMode();
     </div>
   </div>
 </template>
-
-<style>
-/* width */
-::-webkit-scrollbar {
-  width: 5px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-  background: #888;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-</style>

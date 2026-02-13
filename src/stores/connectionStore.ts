@@ -1,17 +1,8 @@
 import { defineStore } from "pinia";
 import { useMeasurementStore } from "./measurementStore";
 import { ProtocolCommandType } from "@/services/ProtocolParser";
-import {
-  connect as bleConnect,
-  disconnect as bleDisconnect,
-  getConnectionUpdates,
-  listServices,
-  sendString,
-  subscribeString,
-  unsubscribe,
-  type BleDevice,
-  type BleService,
-} from "@mnlphlp/plugin-blec";
+import { getTransport } from "@/services/transport";
+import type { BleDevice } from "@/services/transport";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -27,21 +18,6 @@ type ConnectedDevice = {
   id?: string;
   raw?: Record<string, unknown>;
 };
-
-type CharacteristicRef = {
-  characteristic: string;
-  service?: string;
-};
-
-const REQUIRED_SERVICE_UUID = "db594551-159c-4da8-b59e-1c98587348e1";
-const PROP_WRITE = 0x08;
-const PROP_WRITE_WITHOUT_RESPONSE = 0x04;
-const PROP_NOTIFY = 0x10;
-const PROP_INDICATE = 0x20;
-
-function normalizeUuid(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function resolveAddress(device: ConnectableDevice): string {
   return (device.address || device.macAddress || device.deviceId || "").trim();
@@ -65,54 +41,6 @@ function toConnectedDevice(
   };
 }
 
-function hasAnyProperty(value: number, flags: number[]): boolean {
-  return flags.some((flag) => (value & flag) === flag);
-}
-
-function resolveCharacteristics(services: BleService[]): {
-  write: CharacteristicRef | null;
-  notify: CharacteristicRef | null;
-} {
-  let write: CharacteristicRef | null = null;
-  let notify: CharacteristicRef | null = null;
-
-  const normalizedRequiredService = normalizeUuid(REQUIRED_SERVICE_UUID);
-
-  // Only look at the target service
-  const targetService = services.find(
-    (s) => normalizeUuid(s.uuid) === normalizedRequiredService
-  );
-
-  if (!targetService) return { write, notify };
-
-  for (const characteristic of targetService.characteristics) {
-    if (
-      !notify &&
-      hasAnyProperty(characteristic.properties, [PROP_NOTIFY, PROP_INDICATE])
-    ) {
-      notify = {
-        characteristic: characteristic.uuid,
-        service: targetService.uuid,
-      };
-    }
-
-    if (
-      !write &&
-      hasAnyProperty(characteristic.properties, [
-        PROP_WRITE,
-        PROP_WRITE_WITHOUT_RESPONSE,
-      ])
-    ) {
-      write = {
-        characteristic: characteristic.uuid,
-        service: targetService.uuid,
-      };
-    }
-  }
-
-  return { write, notify };
-}
-
 export const useConnectionStore = defineStore("connection", {
   state: () => ({
     currentDevice: null as ConnectedDevice | null,
@@ -121,11 +49,8 @@ export const useConnectionStore = defineStore("connection", {
     lastDisconnectMessage: null as string | null,
     lastDisconnectAt: null as number | null,
     manualDisconnectRequested: false,
-    listenersBound: false,
     console: [] as string[],
     rxBuffer: "",
-    writeRef: null as CharacteristicRef | null,
-    notifyRef: null as CharacteristicRef | null,
   }),
   getters: {
     isConnected: (state) => state.status === "connected",
@@ -134,16 +59,6 @@ export const useConnectionStore = defineStore("connection", {
       !!state.lastDisconnectMessage && !state.manualDisconnectRequested,
   },
   actions: {
-    async bindBleListeners() {
-      if (this.listenersBound) return;
-      this.listenersBound = true;
-
-      await getConnectionUpdates((connected) => {
-        if (connected) return;
-        void this.handleBleDisconnected(false);
-      });
-    },
-
     handleIncomingData(chunk: string) {
       const measurementStore = useMeasurementStore();
       this.rxBuffer += chunk;
@@ -164,7 +79,6 @@ export const useConnectionStore = defineStore("connection", {
 
     async connectToDevice(device: ConnectableDevice): Promise<void> {
       if (this.status === "connecting") return;
-      await this.bindBleListeners();
 
       const address = resolveAddress(device);
       if (!address) {
@@ -179,8 +93,6 @@ export const useConnectionStore = defineStore("connection", {
       this.lastDisconnectAt = null;
       this.manualDisconnectRequested = false;
       this.currentDevice = toConnectedDevice(device, address);
-      this.writeRef = null;
-      this.notifyRef = null;
       this.rxBuffer = "";
 
       const measurementStore = useMeasurementStore();
@@ -189,37 +101,18 @@ export const useConnectionStore = defineStore("connection", {
       }
 
       try {
-        await bleConnect(address, () => {
-          void this.handleBleDisconnected(false);
+        await getTransport().connect({
+          address,
+          deviceName: this.currentDevice.name,
+          onDisconnect: () => void this.handleBleDisconnected(false),
+          onData: (chunk) => this.handleIncomingData(chunk),
         });
-
-        const servicesResult = await listServices(address);
-        const services = Array.isArray(servicesResult) ? servicesResult : [];
-        const { write, notify } = resolveCharacteristics(services);
-        if (!write || !notify) {
-          throw new Error("Unable to find BLE read/write characteristics");
-        }
-
-        this.writeRef = write;
-        this.notifyRef = notify;
-
-        await subscribeString(this.notifyRef.characteristic, (data: string) => {
-          this.handleIncomingData(data);
-        });
-
         this.status = "connected";
       } catch (err) {
         this.currentDevice = null;
         this.status = "error";
         this.lastError = err instanceof Error ? err.message : String(err);
-        this.writeRef = null;
-        this.notifyRef = null;
         this.rxBuffer = "";
-        try {
-          await bleDisconnect();
-        } catch {
-          // ignore cleanup errors from failed connect attempts
-        }
         throw err;
       }
     },
@@ -237,12 +130,10 @@ export const useConnectionStore = defineStore("connection", {
       this.currentDevice = null;
       this.lastError = null;
       this.lastDisconnectAt = Date.now();
-      this.writeRef = null;
-      this.notifyRef = null;
       this.rxBuffer = "";
 
       if (wasConnected && !wasManual) {
-        this.lastDisconnectMessage = "Dispositivo disconnesso inaspettatamente";
+        this.lastDisconnectMessage = "Device disconnected unexpectedly";
       } else if (wasManual) {
         this.lastDisconnectMessage = null;
       }
@@ -255,22 +146,14 @@ export const useConnectionStore = defineStore("connection", {
       this.manualDisconnectRequested = true;
 
       try {
-        if (this.notifyRef?.characteristic) {
-          await unsubscribe(this.notifyRef.characteristic);
-        }
-      } catch {
-        // best-effort unsubscribe
-      }
-
-      try {
-        await bleDisconnect();
+        await getTransport().disconnect();
       } finally {
         await this.handleBleDisconnected(true);
       }
     },
 
     async sendCommand(type: ProtocolCommandType, payload?: string) {
-      if (!this.isConnected || !this.writeRef) return;
+      if (!this.isConnected) return;
       const message = `${type}${payload ? " " + payload : ""}`;
       await this.sendRaw(message);
 
@@ -283,14 +166,10 @@ export const useConnectionStore = defineStore("connection", {
     },
 
     async sendRaw(message: string, appendNewline = true) {
-      if (!this.isConnected || !this.writeRef) return;
+      if (!this.isConnected) return;
       const payload = appendNewline ? `${message}\n` : message;
       this.console.push(`TX: ${message}`);
-      await sendString(
-        this.writeRef.characteristic,
-        payload,
-        "withoutResponse"
-      );
+      await getTransport().send(payload);
     },
 
     clearConsole() {
