@@ -1,5 +1,10 @@
 import { platform } from "@tauri-apps/plugin-os";
-import { exists, mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
+import {
+  exists,
+  mkdir,
+  writeTextFile as fsWriteText,
+  readTextFile as fsReadText,
+} from "@tauri-apps/plugin-fs";
 import { documentDir, join } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -42,6 +47,27 @@ export interface FsService {
    * If the current folder is invalid or empty, returns a sensible platform default.
    */
   initDefaultFolder(current: FolderRef): Promise<FolderRef>;
+
+  /**
+   * Read a text file by name from the given folder.
+   * Returns null if the file does not exist.
+   */
+  readTextFile(params: {
+    folder: FolderRef;
+    fileName: string;
+  }): Promise<string | null>;
+
+  /**
+   * Create or overwrite a text file by name in the given folder.
+   * On Android picked dirs, finds and overwrites an existing file with the same name.
+   * Returns the resulting file path or URI string.
+   */
+  writeTextFile(params: {
+    folder: FolderRef;
+    fileName: string;
+    content: string;
+    mimeType?: string;
+  }): Promise<string>;
 }
 
 // ─── Desktop implementation ─────────────────────────────────────────────────
@@ -71,7 +97,37 @@ class DesktopFsService implements FsService {
       filePath = await join(folder.path, fileName);
     }
 
-    await writeTextFile(filePath, content);
+    await fsWriteText(filePath, content);
+    return filePath;
+  }
+
+  async readTextFile({
+    folder,
+    fileName,
+  }: {
+    folder: FolderRef;
+    fileName: string;
+  }): Promise<string | null> {
+    const filePath = await join(folder.path, fileName);
+    if (!(await exists(filePath))) return null;
+    return fsReadText(filePath);
+  }
+
+  async writeTextFile({
+    folder,
+    fileName,
+    content,
+  }: {
+    folder: FolderRef;
+    fileName: string;
+    content: string;
+    mimeType?: string;
+  }): Promise<string> {
+    if (!(await exists(folder.path))) {
+      await mkdir(folder.path, { recursive: true });
+    }
+    const filePath = await join(folder.path, fileName);
+    await fsWriteText(filePath, content);
     return filePath;
   }
 
@@ -174,10 +230,80 @@ class AndroidFsService implements FsService {
     throw new Error(`Unsupported Android folder path: ${folder.path}`);
   }
 
+  async readTextFile({
+    folder,
+    fileName,
+  }: {
+    folder: FolderRef;
+    fileName: string;
+  }): Promise<string | null> {
+    if (!folder.uri) return null;
+
+    try {
+      const entries = await AndroidFs.readDir(folder.uri);
+      const file = entries.find(
+        (e) => e.type === "File" && e.name === fileName
+      );
+      if (!file) return null;
+      return AndroidFs.readTextFile(file.uri);
+    } catch {
+      return null;
+    }
+  }
+
+  async writeTextFile({
+    folder,
+    fileName,
+    content,
+    mimeType = "text/csv",
+  }: {
+    folder: FolderRef;
+    fileName: string;
+    content: string;
+    mimeType?: string;
+  }): Promise<string> {
+    if (isPublicDir(folder.path)) {
+      const fileUri = await AndroidFs.createNewPublicFile(
+        folder.path,
+        fileName,
+        mimeType
+      );
+      await AndroidFs.writeTextFile(fileUri, content);
+      await AndroidFs.scanPublicFile(fileUri).catch(() => {});
+      return fileUri.uri;
+    }
+
+    if (folder.path.startsWith("content://") && folder.uri) {
+      try {
+        const entries = await AndroidFs.readDir(folder.uri);
+        const existing = entries.find(
+          (e) => e.type === "File" && e.name === fileName
+        );
+        if (existing) {
+          await AndroidFs.writeTextFile(existing.uri, content);
+          return existing.uri.uri;
+        }
+      } catch {
+        /* fall through to create */
+      }
+
+      const fileUri = await AndroidFs.createNewFile(
+        folder.uri,
+        fileName,
+        mimeType
+      );
+      await AndroidFs.writeTextFile(fileUri, content);
+      return fileUri.uri;
+    }
+
+    throw new Error(`Unsupported Android folder path: ${folder.path}`);
+  }
+
   async pickFolder(): Promise<FolderRef | null> {
     const res = await AndroidFs.showOpenDirPicker();
     if (!res) return null;
-
+    
+    //await AndroidFs.releaseAllPersistedPickerUriPermissions();
     await AndroidFs.persistPickerUriPermission(res);
     return { path: res.uri, uri: res };
   }

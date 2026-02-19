@@ -21,7 +21,7 @@ async function selectFolder() {
       toast.warning("No folder selected");
       return;
     }
-    settingsStore.setSaveFolderPath(result.path, result.uri);
+    settingsStore.setSaveFolder(result.path, result.uri);
     selected.value = true;
   } catch (error) {
     toast.error("Failed to select folder. Please try again.");

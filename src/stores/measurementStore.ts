@@ -7,9 +7,11 @@ import {
 } from "@/services/ProtocolParser";
 import { useSettingsStore } from "./settingsStore";
 import { saveMeasurementsCsv } from "@/services/measurementCsvService";
+import { getGpsProvider } from "@/services/gpsProvider";
 
 export const useMeasurementStore = defineStore("measurement", () => {
   // State
+  const gpsProvider = getGpsProvider();
   const data = ref<SensorData[]>([]);
   const currentSessionData = ref<SensorData[]>([]);
   const isAcquiring = ref(false);
@@ -74,6 +76,9 @@ export const useMeasurementStore = defineStore("measurement", () => {
       case ProtocolEventType.DATA:
         const measurement = ProtocolParser.parseDataPayload(parsed.payload);
         if (measurement) {
+          measurement.latitude = gpsProvider.getLocation().latitude;
+          measurement.longitude = gpsProvider.getLocation().longitude;
+          measurement.altitude = gpsProvider.getLocation().altitude;
           data.value.push(measurement);
           if (isAcquiring.value) {
             currentSessionData.value.push(measurement);

@@ -16,17 +16,26 @@ const currentStep = ref<"folder" | "permissions">("folder");
 if (props.startFrom) {
   currentStep.value = props.startFrom;
 }
+
+function handleNext(from: "folder" | "permissions") {
+  if (from === "folder") {
+    if(!props.startFrom) currentStep.value = "permissions";
+    else emit("done")
+  } else {
+    emit("done");
+  }
+}
 </script>
 
 <template>
   <div class="size-full">
     <FolderSetup
       v-if="currentStep === 'folder'"
-      @next="currentStep = 'permissions'"
+      @next="handleNext('folder')"
     />
     <PermissionsSetup
       v-else-if="currentStep === 'permissions'"
-      @next="emit('done')"
+      @next="handleNext('permissions')"
     />
   </div>
 </template>

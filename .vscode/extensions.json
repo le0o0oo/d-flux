@@ -4,6 +4,7 @@
     "aaron-bond.better-comments",
     "tamasfe.even-better-toml",
     "antfu.iconify",
-    "bradlc.vscode-tailwindcss"
+    "bradlc.vscode-tailwindcss",
+    "rust-lang.rust-analyzer"
   ]
 }

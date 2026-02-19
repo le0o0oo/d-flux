@@ -14,15 +14,10 @@ import type { ChartConfig } from "@/components/ui/chart";
 import { onMounted, ref, computed } from "vue";
 import autoAnimate from "@formkit/auto-animate";
 import { SensorData } from "@/services/ProtocolParser";
-
-type Point = { x: number; y: number };
-type RegressionResult = {
-  slope: number;
-  intercept: number;
-  rSquared: number;
-  minX: number;
-  maxX: number;
-};
+import {
+  linearRegression,
+  type RegressionResult,
+} from "@/services/linearRegression";
 
 const props = defineProps<{
   title: string;
@@ -33,6 +28,7 @@ const props = defineProps<{
   chartHeight: string;
   activeTool?: string;
   brushSelection?: [number, number] | null;
+  slopeMeasure?: string;
 }>();
 
 const processedData = computed(() => {
@@ -50,7 +46,7 @@ const processedData = computed(() => {
     return {
       ...d,
       regression: inSelection
-        ? regression.slope * ts + regression.intercept
+        ? regression.slope * (ts - regression.meanX) + regression.meanY
         : Number.NaN,
     };
   });
@@ -96,54 +92,6 @@ const emit = defineEmits<{
   (e: "update:brushSelection", value: [number, number] | null): void;
 }>();
 
-function linearRegression(data: Point[]): RegressionResult {
-  const n = data.length;
-
-  const meanX = data.reduce((acc, p) => acc + p.x, 0) / n;
-  const meanY = data.reduce((acc, p) => acc + p.y, 0) / n;
-
-  let ssXX = 0;
-  let ssXY = 0;
-
-  // Use centered values for numerical stability with large timestamps.
-  for (const p of data) {
-    const dx = p.x - meanX;
-    const dy = p.y - meanY;
-    ssXX += dx * dx;
-    ssXY += dx * dy;
-  }
-
-  let slope = 0;
-  let intercept = meanY;
-
-  if (ssXX === 0) {
-    slope = 0;
-    intercept = meanY;
-  } else {
-    slope = ssXY / ssXX;
-    intercept = meanY - slope * meanX;
-  }
-
-  let ssTot = 0;
-  let ssRes = 0;
-  for (const p of data) {
-    const yHat = slope * p.x + intercept;
-    const totalDelta = p.y - meanY;
-    const residual = p.y - yHat;
-    ssTot += totalDelta * totalDelta;
-    ssRes += residual * residual;
-  }
-
-  // Standard R² definition. If y is constant, treat perfect reconstruction as 1.
-  const rawRSquared = ssTot === 0 ? (ssRes === 0 ? 1 : 0) : 1 - ssRes / ssTot;
-  const rSquared = Math.max(0, Math.min(1, rawRSquared));
-
-  const xs = data.map((d) => d.x);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-
-  return { slope, intercept, rSquared, minX, maxX };
-}
 //function renderRegressionLine(snappedStart: number, snappedEnd: number) { }
 
 function getNearestTimestamp(target: number): number {
@@ -293,17 +241,20 @@ onMounted(() => {
     </div>
 
     <div
-      class="mt-2 grid md:grid-cols-3 grid-cols-1 gap-2"
+      class="mt-2 grid md:grid-cols-2 grid-cols-1 gap-2"
       v-if="activeTool === 'linear_regression'"
     >
       <div
         class="rounded-md border text-xs px-3 py-2 flex flex-col items-center bg-muted"
       >
         <span class="font-semibold text-muted-foreground">Slope</span>
-        <span class="font-mono text-base">{{ formattedSlope }}</span>
+        <span class="font-mono text-base"
+          >{{ (Number(formattedSlope) * 1000).toFixed(1) }}
+          {{ slopeMeasure }}</span
+        >
       </div>
       <div
-        class="rounded-md border text-xs px-3 py-2 flex flex-col items-center bg-muted"
+        class="rounded-md border text-xs px-3 py-2 flex flex-col items-center bg-muted hidden"
       >
         <span class="font-semibold text-muted-foreground">Intercept</span>
         <span class="font-mono text-base">{{ formattedIntercept }}</span>

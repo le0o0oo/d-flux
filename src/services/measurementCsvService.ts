@@ -77,6 +77,9 @@ function buildCsvContent(rows: SensorData[], sensorName: string) {
   const headers = [
     "Timestamp",
     "Date",
+    "Latitude",
+    "Longitude",
+    "Altitude",
     "CO2 (ppm)",
     "Temperature (C)",
     "Humidity (%)",
@@ -86,6 +89,9 @@ function buildCsvContent(rows: SensorData[], sensorName: string) {
     return [
       row.timestamp,
       dateStr,
+      row.latitude ?? "",
+      row.longitude ?? "",
+      row.altitude ?? "",
       row.co2 ?? "",
       row.temperature ?? "",
       row.humidity ?? "",

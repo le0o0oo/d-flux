@@ -3,16 +3,20 @@ import { useStorage } from "@vueuse/core";
 import { getFs, type AndroidFsUri } from "@/services/filesystem";
 
 const saveFolderPath = useStorage("saveFolderPath", "");
-const saveFolderUri = useStorage<AndroidFsUri | null>("saveFolderUri", null);
+const saveFolderUriRaw = useStorage("saveFolderUri", ""); // Store full URI object as JSON
 const doneFirstSetup = useStorage("doneFirstSetup", false);
 
 async function init() {
+  const storedUri = saveFolderUriRaw.value ? (() => {
+    try { return JSON.parse(saveFolderUriRaw.value) as AndroidFsUri; } catch { return null; }
+  })() : null;
+  
   const folder = await getFs().initDefaultFolder({
     path: saveFolderPath.value,
-    uri: saveFolderUri.value,
+    uri: storedUri,
   });
   saveFolderPath.value = folder.path;
-  saveFolderUri.value = folder.uri;
+  saveFolderUriRaw.value = folder.uri ? JSON.stringify(folder.uri) : "";
 }
 
 init();
@@ -20,13 +24,22 @@ init();
 export const useSettingsStore = defineStore("settings", {
   state: () => ({
     saveFolderPath: saveFolderPath,
-    saveFolderUri: saveFolderUri,
     doneFirstSetup: doneFirstSetup,
   }),
+  getters: {
+    saveFolderUri: (): AndroidFsUri | null => {
+      if (!saveFolderUriRaw.value) return null;
+      try {
+        return JSON.parse(saveFolderUriRaw.value) as AndroidFsUri;
+      } catch {
+        return null;
+      }
+    },
+  },
   actions: {
-    setSaveFolderPath(path: string, uri: AndroidFsUri | null = null) {
+    setSaveFolder(path: string, uri: AndroidFsUri | null = null) {
       this.saveFolderPath = path;
-      this.saveFolderUri = uri;
+      saveFolderUriRaw.value = uri ? JSON.stringify(uri) : "";
     },
   },
 });

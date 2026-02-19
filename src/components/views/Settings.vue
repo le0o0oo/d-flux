@@ -21,7 +21,7 @@ async function chooseSaveFolder() {
   try {
     const result = await getFs().pickFolder();
     if (!result) return;
-    settingsStore.setSaveFolderPath(result.path, result.uri);
+    settingsStore.setSaveFolder(result.path, result.uri);
   } catch (error) {
     toast.error("Failed to select folder. Please try again.");
   }

@@ -3,6 +3,7 @@ import { useMeasurementStore } from "@/stores/measurementStore";
 import { Icon } from "@iconify/vue";
 import { Button } from "@/components/ui/button";
 import { computed, onMounted, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import DataTables from "./DataTables.vue";
@@ -10,8 +11,11 @@ import DataCard from "./DataCard.vue";
 import { toast } from "vue-sonner";
 import autoAnimate from "@formkit/auto-animate";
 import type { ChartConfig } from "@/components/ui/chart";
+import { useAnalyzeStore } from "@/stores/analyzeStore";
 
 const measurementStore = useMeasurementStore();
+const analyzeStore = useAnalyzeStore();
+const { brushSelection } = storeToRefs(analyzeStore);
 
 const chartsContainer = ref<HTMLElement | null>(null);
 const currentFilter = ref<"co2" | "temperature" | "humidity">("co2");
@@ -22,7 +26,7 @@ const showCharts = ref<("co2" | "temperature" | "humidity")[]>([
   "temperature",
   "humidity",
 ]);
-const activeTool = ref<undefined | "delete" | "linear_regression">(undefined);
+const activeTool = computed(() => analyzeStore.activeTool);
 
 onMounted(() => {
   if (chartsContainer.value) autoAnimate(chartsContainer.value);
@@ -98,8 +102,6 @@ const chartHeight = computed(() => {
   return `max(280px, calc((100svh - 12rem) / ${count}))`;
 });
 
-const brushSelection = ref<[number, number] | null>(null);
-
 function deleteData() {
   if (!brushSelection.value) return;
   const [start, end] = brushSelection.value;
@@ -109,7 +111,7 @@ function deleteData() {
     (d) => d.timestamp < min || d.timestamp > max
   );
   brushSelection.value = null;
-  activeTool.value = undefined;
+  analyzeStore.activeTool = undefined;
   toast.success("Data cleared");
 }
 </script>
@@ -130,6 +132,7 @@ function deleteData() {
         :chart-height="chartHeight"
         :active-tool="activeTool"
         v-model:brush-selection="brushSelection"
+        slope-measure="ppm/s"
         @open-table="openTable('co2')"
       >
       </DataCard>
@@ -144,6 +147,7 @@ function deleteData() {
         :chart-height="chartHeight"
         :active-tool="activeTool"
         v-model:brush-selection="brushSelection"
+        slope-measure="°C/s"
         @open-table="openTable('temperature')"
       />
 
@@ -157,6 +161,7 @@ function deleteData() {
         :chart-height="chartHeight"
         :active-tool="activeTool"
         v-model:brush-selection="brushSelection"
+        slope-measure="%/s"
         @open-table="openTable('humidity')"
       />
 
@@ -204,7 +209,11 @@ function deleteData() {
 
         <div orientation="vertical" class="w-0.5 rounded-xl bg-secondary"></div>
 
-        <ToggleGroup type="single" v-model="activeTool" class="gap-1.5">
+        <ToggleGroup
+          type="single"
+          v-model="analyzeStore.activeTool"
+          class="gap-1.5"
+        >
           <ToggleGroupItem
             value="delete"
             class="h-9 rounded-xl px-3 text-xs font-medium tracking-wide text-muted-foreground data-[state=on]:bg-destructive data-[state=on]:text-white sm:text-sm"

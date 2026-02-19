@@ -54,7 +54,7 @@ export class MockBleTransport implements BleTransport {
     this.acquiring = true;
 
     this.streamingTimer = setInterval(() => {
-      const co2 = (400 + Math.random() * 80).toFixed(1);
+      const co2 = (400 + Math.random() * 200).toFixed(1);
       const temp = (22 + Math.random() * 3).toFixed(1);
       const hum = (40 + Math.random() * 8).toFixed(1);
       this.emit(`DATA CO2=${co2};TMP=${temp};HUM=${hum}`);

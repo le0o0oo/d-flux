@@ -12,6 +12,9 @@ export enum ProtocolCommandType {
 }
 
 export interface SensorData {
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
   co2?: number;
   temperature?: number;
   humidity?: number;
@@ -51,7 +54,9 @@ export class ProtocolParser {
    */
   static parseDataPayload(payload: string): SensorData {
     const tokens = payload.split(";");
-    const data: any = { timestamp: Date.now() };
+    const data: any = {
+      timestamp: Date.now(),
+    };
 
     tokens.forEach((token) => {
       const [key, value] = token.split("=");

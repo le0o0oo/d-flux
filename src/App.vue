@@ -23,6 +23,11 @@ import { useAppStore } from "./stores/appStore";
 import type { BleDevice } from "@/services/transport";
 import { platform } from "@tauri-apps/plugin-os";
 import SetupFlow from "./components/setup/SetupFlow.vue";
+import { getGpsProvider } from "./services/gpsProvider";
+import { AndroidFs } from "tauri-plugin-android-fs-api";
+import { Button } from "./components/ui/button";
+import Map from "./components/views/Map.vue";
+import { Icon } from "@iconify/vue";
 
 const scannerContainer = ref<HTMLElement | null>(null);
 const parentContainer = ref<HTMLElement | null>(null);
@@ -31,21 +36,66 @@ const connectionStore = useConnectionStore();
 const measurementStore = useMeasurementStore();
 const settingsStore = useSettingsStore();
 const appStore = useAppStore();
+const mapOpen = ref(false);
 const settingsOpen = ref(false);
 const lastSelectedDeviceKey = ref<string | null>(null);
+
+const startSetupFrom = ref<"folder" | "permissions" | undefined>(undefined);
+
+const gpsProvider = getGpsProvider();
 
 onMounted(async () => {
   if (scannerContainer.value) autoAnimate(scannerContainer.value);
   if (parentContainer.value) autoAnimate(parentContainer.value);
+
+  console.log("saveFolderPath", settingsStore.saveFolderPath);
+  if (platform() === "android") {
+    // First setup or no folder selected
+    if (!settingsStore.doneFirstSetup || !settingsStore.saveFolderPath) {
+      appStore.setScreen("setup");
+      return;
+    }
+
+    // Have folder, check permissions
+    const uri = settingsStore.saveFolderUri;
+    if (!uri) {
+      // Should not happen, but reset to setup if it does
+      startSetupFrom.value = "folder";
+      appStore.setScreen("setup");
+      return;
+    }
+
+    console.log(
+      "checkPersistedPickerUriPermission",
+      await AndroidFs.checkPersistedPickerUriPermission(uri, "ReadAndWrite"),
+    );
+    console.log(
+      "checkPickerUriPermission",
+      await AndroidFs.checkPickerUriPermission(uri, "ReadAndWrite"),
+    );
+    const hasPersisted = await AndroidFs.checkPersistedPickerUriPermission(
+      uri,
+      "ReadAndWrite",
+    );
+    const hasCurrent = await AndroidFs.checkPickerUriPermission(
+      uri,
+      "ReadAndWrite",
+    );
+
+    if (!hasPersisted || !hasCurrent) {
+      startSetupFrom.value = "folder";
+      appStore.setScreen("setup");
+    }
+  }
+
+  setInterval(() => {
+    console.log("GPS:", gpsProvider.getLocation());
+  }, 5000);
 });
 
 onBeforeUnmount(async () => {
   await connectionStore.disconnect();
 });
-
-if (platform() === "android" && !settingsStore.doneFirstSetup) {
-  appStore.setScreen("setup");
-}
 
 async function handleConnect(device: BleDevice) {
   if (connectionStore.isConnecting) return;
@@ -85,9 +135,22 @@ useColorMode();
     <Toaster />
     <div class="size-full pt-8" ref="parentContainer">
       <DashboardView v-if="appStore.currentScreen === 'main'" />
-      <SetupFlow v-if="appStore.currentScreen === 'setup'" @done="doneSetup" />
+      <SetupFlow
+        v-if="appStore.currentScreen === 'setup'"
+        :start-from="startSetupFrom"
+        @done="doneSetup"
+      />
       <div class="p-5" v-else>
         <div class="relative" ref="scannerContainer">
+          <Dialog v-model:open="mapOpen">
+            <DialogContent class="sm:max-w-lg px-3 pt-0 pb-3">
+              <DialogHeader class="px-4 pt-4">
+                <DialogTitle>Map</DialogTitle>
+              </DialogHeader>
+              <Map />
+            </DialogContent>
+          </Dialog>
+
           <Dialog v-model:open="settingsOpen">
             <DialogContent class="sm:max-w-lg p-0">
               <DialogHeader class="px-4 pt-4">
@@ -96,6 +159,17 @@ useColorMode();
               <Settings :show-title="false" />
             </DialogContent>
           </Dialog>
+
+          <div class="flex items-center justify-end gap-2 mb-4">
+            <Button variant="outline" @click="mapOpen = true">
+              <Icon icon="lucide:map" class="w-4 h-4 mr-1.5" />
+              Map
+            </Button>
+            <Button variant="outline" @click="settingsOpen = true">
+              <Icon icon="lucide:settings" class="w-4 h-4 mr-1.5" />
+              Settings
+            </Button>
+          </div>
 
           <Scanner
             @connect="handleConnect"
