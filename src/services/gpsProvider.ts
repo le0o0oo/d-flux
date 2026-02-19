@@ -37,7 +37,7 @@ class MobileGpsProvider implements GpsProvider {
           longitude: pos?.coords.longitude ?? 0,
           altitude: pos?.coords.altitude ?? 0,
         };
-      }
+      },
     );
   }
 

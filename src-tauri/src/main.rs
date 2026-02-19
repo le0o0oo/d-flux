@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    testing_app_lib::run()
+    sensors_app_lib::run()
 }

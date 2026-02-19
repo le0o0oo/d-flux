@@ -19,9 +19,12 @@ const mapContainer = ref<HTMLDivElement | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const pointCount = ref(0);
+const isSatellite = ref(false);
 
 let map: L.Map | null = null;
 let markerGroup: L.LayerGroup | null = null;
+let streetLayer: L.TileLayer | null = null;
+let satelliteLayer: L.TileLayer | null = null;
 
 function buildPopup(row: FluxRow): string {
   const date = new Date(row.date).toLocaleString();
@@ -130,10 +133,21 @@ onMounted(async () => {
     zoomControl: true,
   });
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors",
-    maxZoom: 19,
-  }).addTo(map);
+  streetLayer = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19,
+    },
+  ).addTo(map);
+
+  satelliteLayer = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 19,
+    },
+  );
 
   markerGroup = L.layerGroup().addTo(map);
 
@@ -143,12 +157,24 @@ onMounted(async () => {
   loadPoints();
 });
 
+watch(() => settingsStore.saveFolderPath, loadPoints);
+
 onBeforeUnmount(() => {
   map?.remove();
   map = null;
 });
 
-watch(() => settingsStore.saveFolderPath, loadPoints);
+function toggleMapLayer() {
+  if (!map || !streetLayer || !satelliteLayer) return;
+  isSatellite.value = !isSatellite.value;
+  if (isSatellite.value) {
+    map.removeLayer(streetLayer);
+    map.addLayer(satelliteLayer);
+  } else {
+    map.removeLayer(satelliteLayer);
+    map.addLayer(streetLayer);
+  }
+}
 </script>
 
 <template>
@@ -177,6 +203,13 @@ watch(() => settingsStore.saveFolderPath, loadPoints);
       @click="loadPoints"
     >
       ↻ Reload ({{ pointCount }} points)
+    </button>
+
+    <button
+      class="absolute bottom-3 left-3 z-10 bg-background/90 border rounded-lg px-3 py-1.5 text-xs text-muted-foreground shadow-sm hover:bg-accent transition-colors cursor-pointer"
+      @click="toggleMapLayer"
+    >
+      {{ isSatellite ? "🛰️ Satellite" : "🗺️ Street" }}
     </button>
   </div>
 </template>
@@ -235,7 +268,7 @@ watch(() => settingsStore.saveFolderPath, loadPoints);
   z-index: 1000 !important;
   background: white !important;
   position: relative !important;
-  box-shadow: 0 1px 5px rgba(0,0,0,0.65) !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65) !important;
   border-radius: 4px !important;
 }
 

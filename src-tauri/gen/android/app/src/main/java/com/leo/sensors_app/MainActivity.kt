@@ -1,4 +1,4 @@
-package com.leo.testing_app
+package com.leo.sensors_app
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

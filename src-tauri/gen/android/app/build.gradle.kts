@@ -20,10 +20,10 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 36
-    namespace = "com.leo.testing_app"
+    namespace = "com.leo.sensors_app"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.leo.testing_app"
+        applicationId = "com.leo.sensors_app"
         minSdk = 26
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
