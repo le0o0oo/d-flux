@@ -61,7 +61,7 @@ function openTable(filter: "co2" | "temperature" | "humidity") {
 function getMaxValue<T>(
   items: T[],
   picker: (item: T) => number | null | undefined,
-  fallback: number
+  fallback: number,
 ) {
   if (!items.length) return fallback;
   const values = items
@@ -79,20 +79,20 @@ function addHeadroom(value: number, ratio = 0.1) {
 const co2Max = computed(() =>
   addHeadroom(
     getMaxValue(measurementStore.data, (d) => d.co2 ?? 0, 1200),
-    0.15
-  )
+    0.15,
+  ),
 );
 const temperatureMax = computed(() =>
   addHeadroom(
     getMaxValue(measurementStore.data, (d) => d.temperature ?? 0, 50),
-    0.1
-  )
+    0.1,
+  ),
 );
 const humidityMax = computed(() =>
   addHeadroom(
     getMaxValue(measurementStore.data, (d) => d.humidity ?? 0, 100),
-    0.1
-  )
+    0.1,
+  ),
 );
 
 const chartHeight = computed(() => {
@@ -108,7 +108,7 @@ function deleteData() {
   const min = Math.min(start, end);
   const max = Math.max(start, end);
   measurementStore.data = measurementStore.data.filter(
-    (d) => d.timestamp < min || d.timestamp > max
+    (d) => d.timestamp < min || d.timestamp > max,
   );
   brushSelection.value = null;
   analyzeStore.activeTool = undefined;
@@ -173,7 +173,7 @@ function deleteData() {
     </div>
 
     <div
-      class="fixed bottom-4 z-20 flex flex-col items-center gap-2 pointer-events-none left-1/2 -translate-x-1/2"
+      class="fixed bottom-[calc(env(safe-area-inset-bottom)+16px)] z-20 flex flex-col items-center gap-2 pointer-events-none left-1/2 -translate-x-1/2"
     >
       <div class="z-999 pointer-events-auto">
         <Button

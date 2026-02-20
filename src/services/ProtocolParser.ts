@@ -27,7 +27,7 @@ export class ProtocolParser {
    * Expected format: "EVENT_TYPE PAYLOAD"
    */
   static parseLine(
-    line: string
+    line: string,
   ): { type: ProtocolEventType; payload: string } | null {
     const trimmed = line.trim();
     if (!trimmed) return null;
@@ -36,7 +36,6 @@ export class ProtocolParser {
     const typeStr = parts[0];
     const payload = parts.slice(1).join(" ");
 
-    // Basic validation of event type
     if (
       Object.values(ProtocolEventType).includes(typeStr as ProtocolEventType)
     ) {

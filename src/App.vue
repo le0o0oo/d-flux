@@ -196,3 +196,9 @@ useColorMode();
     </div>
   </div>
 </template>
+
+<style>
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+</style>

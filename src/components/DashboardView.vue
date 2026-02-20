@@ -26,7 +26,7 @@ watch(
   (next) => {
     scanActive.value = next;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 async function toggleScan(): Promise<void> {
@@ -38,7 +38,7 @@ async function toggleScan(): Promise<void> {
     await connectionStore.sendCommand(
       nextValue
         ? ProtocolCommandType.START_ACQUISITION
-        : ProtocolCommandType.STOP_ACQUISITION
+        : ProtocolCommandType.STOP_ACQUISITION,
     );
   } catch (err) {
     scanActive.value = !nextValue;
@@ -59,8 +59,8 @@ async function handleSaveFlux() {
 
 <template>
   <div class="size-full">
-    <SidebarProvider class="h-svh">
-      <AppSidebar class="top-8 h-[calc(100svh-2rem)]!" />
+    <SidebarProvider class="h-dvh">
+      <AppSidebar class="top-8 h-[calc(100dvh-2rem)]!" />
       <SidebarInset>
         <header
           class="flex h-16 shrink-0 items-center gap-2 border-b px-4 sticky top-0 left-0 z-20 bg-background"
@@ -92,7 +92,7 @@ async function handleSaveFlux() {
           </div>
         </header>
         <div
-          class="flex flex-1 flex-col gap-4 p-4 min-w-0 mb-8"
+          class="flex flex-1 flex-col gap-4 p-4 min-w-0 mb-8 pb-[calc(env(safe-area-inset-bottom)+16px)]"
           ref="parentContainer"
         >
           <component :is="currentView" />

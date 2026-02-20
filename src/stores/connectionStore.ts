@@ -25,7 +25,7 @@ function resolveAddress(device: ConnectableDevice): string {
 
 function toConnectedDevice(
   device: ConnectableDevice,
-  fallbackAddress: string
+  fallbackAddress: string,
 ): ConnectedDevice {
   return {
     name: device.name || "BLE device",

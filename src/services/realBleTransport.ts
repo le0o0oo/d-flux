@@ -44,7 +44,7 @@ function resolveCharacteristics(services: BleService[]): {
 } {
   const normalizedRequiredService = normalizeUuid(REQUIRED_SERVICE_UUID);
   const targetService = services.find(
-    (s) => normalizeUuid(s.uuid) === normalizedRequiredService
+    (s) => normalizeUuid(s.uuid) === normalizedRequiredService,
   );
   if (!targetService) return { write: null, notify: null };
 
@@ -184,7 +184,7 @@ export class RealBleTransport implements BleTransport {
 export class RealScanProvider implements ScanProvider {
   async scan(
     onResults: (devices: BleDevice[]) => void,
-    timeoutMs: number
+    timeoutMs: number,
   ): Promise<void> {
     await startScan((devices) => {
       onResults(devices as BleDevice[]);

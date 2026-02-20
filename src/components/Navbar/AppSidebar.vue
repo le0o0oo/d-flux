@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 });
 const { state, isMobile, setOpen, setOpenMobile } = useSidebar();
 const isSidebarCollapsed = computed(
-  () => !isMobile.value && state.value === "collapsed"
+  () => !isMobile.value && state.value === "collapsed",
 );
 </script>
 
@@ -33,7 +33,10 @@ const isSidebarCollapsed = computed(
 
       <SidebarGroup>
         <SidebarMenuItem>
-          <ConnectStatus :collapsed="isSidebarCollapsed" />
+          <ConnectStatus
+            class="mb-[env(safe-area-inset-bottom)]"
+            :collapsed="isSidebarCollapsed"
+          />
         </SidebarMenuItem>
       </SidebarGroup>
     </SidebarContent>

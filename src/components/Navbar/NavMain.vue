@@ -113,7 +113,13 @@ function handleItemClick(item: NavItem) {
         </template>
       </div>
       <SidebarMenuItem class="mt-auto">
-        <SidebarMenuButton @click="setView(Settings)" tooltip="Settings">
+        <SidebarMenuButton
+          @click="
+            emit('select');
+            setView(Settings);
+          "
+          tooltip="Settings"
+        >
           <Icon icon="lucide:settings" />
           <span>Settings</span>
         </SidebarMenuButton>
