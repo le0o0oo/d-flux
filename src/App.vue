@@ -28,6 +28,7 @@ import { AndroidFs } from "tauri-plugin-android-fs-api";
 import { Button } from "./components/ui/button";
 import Map from "./components/views/Map.vue";
 import { Icon } from "@iconify/vue";
+import { open } from "@tauri-apps/plugin-shell";
 
 const scannerContainer = ref<HTMLElement | null>(null);
 const parentContainer = ref<HTMLElement | null>(null);
@@ -127,6 +128,20 @@ function doneSetup() {
 }
 
 useColorMode();
+
+document.addEventListener("click", async (e) => {
+  // @ts-expect-error
+  const anchor = e.target?.closest("a");
+  if (!anchor) return;
+
+  const url = anchor.getAttribute("href");
+  if (!url) return;
+
+  if (url.startsWith("http")) {
+    e.preventDefault();
+    await open(url);
+  }
+});
 </script>
 
 <template>

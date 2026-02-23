@@ -16,6 +16,7 @@ import type {
   ConnectParams,
   ScanProvider,
 } from "@/services/transport";
+import { ProtocolCommandType } from "./ProtocolParser";
 
 // ─── BLE characteristic constants ───────────────────────────────────────────
 
@@ -172,6 +173,7 @@ export class RealBleTransport implements BleTransport {
 
     try {
       await bleDisconnect();
+      this.send(ProtocolCommandType.DISCONNECT);
     } finally {
       this.writeCharacteristic = null;
       this.notifyCharacteristic = null;

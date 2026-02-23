@@ -117,9 +117,9 @@ function deleteData() {
 </script>
 
 <template>
-  <div class="relative mb-16">
+  <div class="relative mb-16 w-full max-w-full overflow-hidden flex flex-col">
     <div
-      class="grid gap-4 sm:gap-6 md:grid-cols-1 xl:grid-cols-1 mt-2"
+      class="grid gap-4 sm:gap-6 grid-cols-1 w-full min-w-0 flex-1"
       ref="chartsContainer"
     >
       <DataCard

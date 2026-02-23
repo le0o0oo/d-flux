@@ -78,13 +78,13 @@ const regressionResult = computed<RegressionResult | null>(() => {
 });
 
 const formattedSlope = computed(
-  () => regressionResult.value?.slope.toFixed(6) ?? "—"
+  () => regressionResult.value?.slope.toFixed(6) ?? "—",
 );
 const formattedIntercept = computed(
-  () => regressionResult.value?.intercept.toFixed(2) ?? "—"
+  () => regressionResult.value?.intercept.toFixed(2) ?? "—",
 );
 const formattedRSquared = computed(
-  () => regressionResult.value?.rSquared.toFixed(4) ?? "—"
+  () => regressionResult.value?.rSquared.toFixed(4) ?? "—",
 );
 
 const emit = defineEmits<{
@@ -125,7 +125,7 @@ function getNearestTimestamp(target: number): number {
 function handleBrushMove(
   selection: [number, number],
   _event: any,
-  userDriven: boolean
+  userDriven: boolean,
 ) {
   if (!userDriven || !selection) return;
   const [rawStart, rawEnd] = selection;
@@ -146,7 +146,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="rounded-lg border bg-card p-3 sm:p-4 shadow-sm space-y-3 sm:space-y-3"
+    class="rounded-lg border bg-card p-3 sm:p-4 shadow-sm space-y-3 sm:space-y-3 w-full min-w-0"
     ref="chartContainer"
   >
     <div class="flex items-center justify-between">
@@ -160,10 +160,10 @@ onMounted(() => {
       </Button>
     </div>
 
-    <div class="chart-container mb-8">
+    <div class="chart-container mb-8 w-full overflow-hidden">
       <ChartContainer
         :config="chartConfig"
-        class="aspect-auto w-full"
+        class="aspect-auto w-full min-w-0"
         :style="{ height: chartHeight }"
         :cursor="false"
       >
@@ -201,15 +201,16 @@ onMounted(() => {
             :domain-line="false"
             :grid-line="false"
             :num-ticks="6"
-            :tick-format="(d: number) =>
-              new Date(d).toLocaleString('it-IT', {
-                month: undefined,
-                day: undefined,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              })
-              "
+            :tick-format="
+              (d: number) =>
+                new Date(d).toLocaleString('it-IT', {
+                  month: undefined,
+                  day: undefined,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })
+            "
           />
           <VisAxis
             type="y"
@@ -254,7 +255,8 @@ onMounted(() => {
         >
       </div>
       <div
-        class="rounded-md border text-xs px-3 py-2 flex flex-col items-center bg-muted hidden"
+        class="rounded-md border text-xs px-3 py-2 flex flex-col items-center bg-muted"
+        v-if="false"
       >
         <span class="font-semibold text-muted-foreground">Intercept</span>
         <span class="font-mono text-base">{{ formattedIntercept }}</span>
