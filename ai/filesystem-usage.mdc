@@ -1,9 +1,3 @@
----
-description: File system operations must go through the FsService abstraction in filesystem.ts
-globs: src/services/**/*.ts, src/stores/**/*.ts, src/components/**/*.vue
-alwaysApply: false
----
-
 # File System Access — Always Use `getFs()` from `filesystem.ts`
 
 This is a cross-platform Tauri app (Desktop + Android). Android uses content URIs and the `AndroidFs` plugin, NOT regular file paths.

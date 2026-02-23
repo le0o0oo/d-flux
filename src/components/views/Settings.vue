@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { getFs } from "@/services/filesystem";
 import { toast } from "vue-sonner";
+import DeviceSettings from "./DeviceSettings.vue";
+import { useConnectionStore } from "@/stores/connectionStore";
 
 const settingsStore = useSettingsStore();
+const connectionStore = useConnectionStore();
 
 withDefaults(
   defineProps<{
@@ -14,7 +17,7 @@ withDefaults(
   }>(),
   {
     showTitle: true,
-  }
+  },
 );
 
 async function chooseSaveFolder() {
@@ -63,6 +66,8 @@ async function chooseSaveFolder() {
           </Button>
         </div>
       </div>
+
+      <DeviceSettings v-if="connectionStore.status === 'connected'" />
     </div>
   </div>
 </template>

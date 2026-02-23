@@ -3,13 +3,17 @@ export enum ProtocolEventType {
   DATA = "DATA",
   ACQUISITION_STATE = "ACQUISITION_STATE",
   ERROR = "ERROR",
+  SETTINGS = "SETTINGS",
 }
 
 export enum ProtocolCommandType {
   START_ACQUISITION = "START_ACQUISITION",
   STOP_ACQUISITION = "STOP_ACQUISITION",
   GET_ACQUISITION_STATE = "GET_ACQUISITION_STATE",
-  DISCONNECT = "DISCONNECT"
+  WHOIS = "WHOIS",
+  DISCONNECT = "DISCONNECT",
+  GET_SETTINGS = "GET_SETTINGS",
+  SET_SETTINGS = "SET_SETTINGS",
 }
 
 export interface SensorData {
@@ -20,6 +24,11 @@ export interface SensorData {
   temperature?: number;
   humidity?: number;
   timestamp: number;
+}
+
+export interface DeviceSettings {
+  co2Offset: number;
+  co2Multiplier: number;
 }
 
 export class ProtocolParser {
@@ -79,5 +88,32 @@ export class ProtocolParser {
     });
 
     return data as SensorData;
+  }
+
+  static parseSettingsPayload(payload: string): DeviceSettings {
+    const tokens = payload.split(";");
+    const data = {
+      co2Offset: 0,
+      co2Multiplier: 1,
+    };
+
+    tokens.forEach((token) => {
+      const [key, value] = token.split("=");
+      if (!key || !value) return;
+
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) return;
+
+      switch (key) {
+        case "multiplier":
+          data.co2Multiplier = numValue;
+          break;
+        case "offset":
+          data.co2Offset = numValue;
+          break;
+      }
+    });
+
+    return data;
   }
 }

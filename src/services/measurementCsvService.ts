@@ -1,5 +1,6 @@
 import type { SensorData } from "@/services/ProtocolParser";
 import { getFs } from "@/services/filesystem";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 type Stats = { avg: number | null; min: number | null; max: number | null };
 
@@ -30,13 +31,13 @@ function formatStatValue(value: number | null) {
 
 function calculateStats(
   rows: SensorData[],
-  picker: (row: SensorData) => number | undefined
+  picker: (row: SensorData) => number | undefined,
 ): Stats {
   const values = rows
     .map(picker)
     .filter(
       (value): value is number =>
-        typeof value === "number" && Number.isFinite(value)
+        typeof value === "number" && Number.isFinite(value),
     );
   if (values.length === 0) {
     return { avg: null, min: null, max: null };
@@ -51,11 +52,16 @@ function calculateStats(
 }
 
 function buildCsvContent(rows: SensorData[], sensorName: string) {
+  const settingsStore = useSettingsStore();
+
   const startTs = rows[0].timestamp;
   const endTs = rows[rows.length - 1].timestamp;
   const co2Stats = calculateStats(rows, (row) => row.co2);
   const temperatureStats = calculateStats(rows, (row) => row.temperature);
   const humidityStats = calculateStats(rows, (row) => row.humidity);
+  const co2Multiplier =
+    settingsStore.deviceSettings.settings.co2CalibrationMultiplier;
+  const co2Offset = settingsStore.deviceSettings.settings.co2CalibrationOffset;
 
   const metadataRows = [
     ["Metadata", "Value"],
@@ -72,6 +78,8 @@ function buildCsvContent(rows: SensorData[], sensorName: string) {
     ["Avg Humidity (%)", formatStatValue(humidityStats.avg)],
     ["Min Humidity (%)", formatStatValue(humidityStats.min)],
     ["Max Humidity (%)", formatStatValue(humidityStats.max)],
+    ["CO2 Multiplier", formatStatValue(co2Multiplier)],
+    ["CO2 Offset", formatStatValue(co2Offset)],
   ].map((row) => row.join(","));
 
   const headers = [

@@ -7,10 +7,16 @@ const saveFolderUriRaw = useStorage("saveFolderUri", ""); // Store full URI obje
 const doneFirstSetup = useStorage("doneFirstSetup", false);
 
 async function init() {
-  const storedUri = saveFolderUriRaw.value ? (() => {
-    try { return JSON.parse(saveFolderUriRaw.value) as AndroidFsUri; } catch { return null; }
-  })() : null;
-  
+  const storedUri = saveFolderUriRaw.value
+    ? (() => {
+        try {
+          return JSON.parse(saveFolderUriRaw.value) as AndroidFsUri;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
   const folder = await getFs().initDefaultFolder({
     path: saveFolderPath.value,
     uri: storedUri,
@@ -25,6 +31,15 @@ export const useSettingsStore = defineStore("settings", {
   state: () => ({
     saveFolderPath: saveFolderPath,
     doneFirstSetup: doneFirstSetup,
+
+    deviceSettings: {
+      applied: true,
+
+      settings: {
+        co2CalibrationOffset: 0.0,
+        co2CalibrationMultiplier: 1.0,
+      },
+    },
   }),
   getters: {
     saveFolderUri: (): AndroidFsUri | null => {

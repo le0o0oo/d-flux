@@ -151,6 +151,7 @@ export class RealBleTransport implements BleTransport {
     await subscribeString(this.notifyCharacteristic, (data: string) => {
       params.onData(data);
     });
+    await this.send(ProtocolCommandType.GET_SETTINGS);
   }
 
   async send(message: string): Promise<void> {
@@ -173,7 +174,7 @@ export class RealBleTransport implements BleTransport {
 
     try {
       await bleDisconnect();
-      this.send(ProtocolCommandType.DISCONNECT);
+      await this.send(ProtocolCommandType.DISCONNECT);
     } finally {
       this.writeCharacteristic = null;
       this.notifyCharacteristic = null;

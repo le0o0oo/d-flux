@@ -18,11 +18,11 @@ export const useMeasurementStore = defineStore("measurement", () => {
   const startTime = ref<number | null>(null);
   const sensorName = ref("sensor");
   const backupInProgress = ref(false);
+  const settingsStore = useSettingsStore();
 
   async function saveRowsToCsv(rows: SensorData[]) {
     if (rows.length === 0) return null;
 
-    const settingsStore = useSettingsStore();
     const saveFolderPath = settingsStore.saveFolderPath;
     if (!saveFolderPath) {
       console.warn("Save folder path is not configured");
@@ -76,6 +76,15 @@ export const useMeasurementStore = defineStore("measurement", () => {
       case ProtocolEventType.DATA:
         const measurement = ProtocolParser.parseDataPayload(parsed.payload);
         if (measurement) {
+          const co2Multiplier =
+            settingsStore.deviceSettings.settings.co2CalibrationMultiplier;
+          const co2Offset =
+            settingsStore.deviceSettings.settings.co2CalibrationOffset;
+
+          if (typeof measurement.co2 === "number") {
+            measurement.co2 = measurement.co2 * co2Multiplier + co2Offset;
+          }
+
           measurement.latitude = gpsProvider.getLocation().latitude;
           measurement.longitude = gpsProvider.getLocation().longitude;
           measurement.altitude = gpsProvider.getLocation().altitude;
@@ -104,6 +113,18 @@ export const useMeasurementStore = defineStore("measurement", () => {
 
       case ProtocolEventType.ERROR:
         console.error("Device reported error:", parsed.payload);
+        break;
+
+      case ProtocolEventType.SETTINGS:
+        const deviceSettings = ProtocolParser.parseSettingsPayload(
+          parsed.payload,
+        );
+        settingsStore.deviceSettings.settings.co2CalibrationMultiplier =
+          deviceSettings.co2Multiplier;
+        settingsStore.deviceSettings.settings.co2CalibrationOffset =
+          deviceSettings.co2Offset;
+
+        settingsStore.deviceSettings.applied = true;
         break;
     }
   }

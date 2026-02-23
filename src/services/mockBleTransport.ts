@@ -1,4 +1,7 @@
-import { ProtocolCommandType } from "@/services/ProtocolParser";
+import {
+  ProtocolCommandType,
+  ProtocolEventType,
+} from "@/services/ProtocolParser";
 import { REQUIRED_SERVICE_UUID } from "@/services/bleConstants";
 import config from "@/config/config";
 import type {
@@ -37,6 +40,8 @@ export class MockBleTransport implements BleTransport {
       this.emit("ACQUISITION_STATE 0");
     } else if (trimmed.startsWith(ProtocolCommandType.GET_ACQUISITION_STATE)) {
       this.emit(`ACQUISITION_STATE ${this.acquiring ? "1" : "0"}`);
+    } else if (trimmed.startsWith(ProtocolCommandType.GET_SETTINGS)) {
+      this.emit(`${ProtocolEventType.SETTINGS} multiplier=1.0;offset=0.0`);
     }
   }
 
@@ -110,7 +115,7 @@ function wait(ms: number): Promise<void> {
 export class MockScanProvider implements ScanProvider {
   async scan(
     onResults: (devices: BleDevice[]) => void,
-    _timeoutMs: number
+    _timeoutMs: number,
   ): Promise<void> {
     await wait(MOCK_SCAN_DELAY_MS);
     onResults(createMockDevices());

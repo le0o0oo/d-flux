@@ -18,7 +18,7 @@ import {
   componentToString,
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import autoAnimate from "@formkit/auto-animate";
 import { SensorData } from "@/services/ProtocolParser";
 import {
@@ -33,7 +33,7 @@ const props = defineProps<{
   data: SensorData[];
   yMax: number;
   chartHeight: string;
-  activeTool?: string;
+  activeTool?: "linear_regression" | "delete";
   brushSelection?: [number, number] | null;
   slopeMeasure?: string;
 }>();
@@ -57,6 +57,33 @@ const processedData = computed(() => {
         : Number.NaN,
     };
   });
+});
+
+const yDomain = computed<[number, number]>(() => {
+  const values: number[] = [];
+
+  processedData.value.forEach((d) => {
+    const baseValue = Number(d[props.dataKey]);
+    if (Number.isFinite(baseValue)) values.push(baseValue);
+
+    if (props.activeTool === "linear_regression") {
+      const regressionValue = Number((d as any).regression);
+      if (Number.isFinite(regressionValue)) values.push(regressionValue);
+    }
+  });
+
+  if (!values.length) return [0, props.yMax];
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  if (min === max) {
+    const padding = Math.max(Math.abs(min) * 0.05, 0.5);
+    return [min - padding, max + padding];
+  }
+
+  const padding = (max - min) * 0.05;
+  return [min - padding, max + padding];
 });
 
 const regressionResult = computed<RegressionResult | null>(() => {
@@ -177,7 +204,7 @@ onMounted(() => {
         <VisXYContainer
           :data="processedData"
           :margin="{ left: -32 }"
-          :y-domain="[0, yMax]"
+          :y-domain="yDomain"
         >
           <VisLine
             :x="(d: any) => d.timestamp"
@@ -209,6 +236,7 @@ onMounted(() => {
             :selection="brushSelection"
             :draggable="true"
             :onBrushEnd="handleBrushMove"
+            :duration="0"
           />
 
           <VisAxis
@@ -218,6 +246,7 @@ onMounted(() => {
             :domain-line="false"
             :grid-line="false"
             :num-ticks="6"
+            :duration="0"
             :tick-format="
               (d: number) =>
                 new Date(d).toLocaleString('it-IT', {
@@ -305,6 +334,15 @@ onMounted(() => {
   --vis-free-brush-selection-stroke-color: var(--secondary-foreground);
   --vis-free-brush-handle-fill-color: var(--secondary);
   --vis-free-brush-handle-stroke-color: var(--primary);
+}
+
+.handle {
+  width: 2.5px;
+  fill: var(--primary) !important;
+  stroke-width: 30px;
+  stroke: transparent;
+  stroke-opacity: 0;
+  opacity: 0.8;
 }
 
 /* 

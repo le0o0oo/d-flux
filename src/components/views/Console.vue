@@ -18,7 +18,7 @@ const connectionStore = useConnectionStore();
 
 const sending = ref(false);
 const selectedCommand = ref<ProtocolCommandType>(
-  ProtocolCommandType.GET_ACQUISITION_STATE
+  ProtocolCommandType.GET_ACQUISITION_STATE,
 );
 const commandPayload = ref("");
 const rawPayload = ref("");
@@ -45,6 +45,10 @@ const commandOptions = [
   ProtocolCommandType.START_ACQUISITION,
   ProtocolCommandType.STOP_ACQUISITION,
   ProtocolCommandType.GET_ACQUISITION_STATE,
+  ProtocolCommandType.WHOIS,
+  ProtocolCommandType.DISCONNECT,
+  ProtocolCommandType.GET_SETTINGS,
+  ProtocolCommandType.SET_SETTINGS,
 ];
 const appendNewline = computed(() => appendNewlineMode.value === "append");
 
@@ -59,7 +63,7 @@ watch(
   () => consoleLines.value.length,
   () => {
     void scrollLogsToBottom();
-  }
+  },
 );
 
 function lineClass(line: string) {
@@ -77,7 +81,7 @@ async function sendSelectedCommand() {
     const payload = commandPayload.value.trim();
     await connectionStore.sendCommand(
       selectedCommand.value,
-      payload || undefined
+      payload || undefined,
     );
     // connectionStore.console.push(
     //   `TX: ${selectedCommand.value}${payload ? ` ${payload}` : ""}`
