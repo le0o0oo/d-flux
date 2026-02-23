@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { VisXYContainer, VisLine, VisAxis, VisBrush } from "@unovis/vue";
+import {
+  VisXYContainer,
+  VisLine,
+  VisAxis,
+  VisBrush,
+  VisFreeBrush,
+} from "@unovis/vue";
+import { CurveType } from "@unovis/ts";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@iconify/vue";
 import {
@@ -177,6 +184,7 @@ onMounted(() => {
             :y="(d: any) => d[dataKey]"
             :color="chartConfig[dataKey]?.color"
             :line-width="2"
+            :curve-type="CurveType.Linear"
           />
           <VisLine
             v-if="activeTool === 'linear_regression'"
@@ -184,11 +192,20 @@ onMounted(() => {
             :y="(d: any) => d.regression"
             color="#f97316"
             :line-width="2"
+            :curve-type="CurveType.Linear"
           />
 
-          <VisBrush
+          <!-- <VisBrush
             v-if="activeTool === 'linear_regression' || activeTool === 'delete'"
             :selectionMinLength="2"
+            :selection="brushSelection"
+            :draggable="true"
+            :onBrushEnd="handleBrushMove"
+          /> -->
+          <VisFreeBrush
+            v-if="activeTool === 'linear_regression' || activeTool === 'delete'"
+            :selectionMinLength="2"
+            :autoHide="false"
             :selection="brushSelection"
             :draggable="true"
             :onBrushEnd="handleBrushMove"
@@ -273,7 +290,7 @@ onMounted(() => {
 
 <style>
 .chart-container {
-  /* Light mode brush */
+  /* Brush */
   --vis-brush-selection-fill-color: none;
   --vis-brush-selection-stroke-color: none;
   --vis-brush-selection-opacity: 0;
@@ -281,6 +298,13 @@ onMounted(() => {
   --vis-brush-unselected-opacity: 0.95;
   --vis-brush-handle-fill-color: var(--secondary);
   --vis-brush-handle-stroke-color: var(--secondary-foreground);
+
+  /* Free brush */
+  --vis-free-brush-selection-fill-color: var(--secondary);
+  --vis-free-brush-selection-fill-opacity: 0.4;
+  --vis-free-brush-selection-stroke-color: var(--secondary-foreground);
+  --vis-free-brush-handle-fill-color: var(--secondary);
+  --vis-free-brush-handle-stroke-color: var(--primary);
 }
 
 /* 

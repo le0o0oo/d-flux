@@ -20,7 +20,7 @@ const props = withDefaults(
   }>(),
   {
     collapsed: false,
-  }
+  },
 );
 
 const disconnecting = ref(false);
@@ -34,7 +34,7 @@ watch(
   (next) => {
     scanActive.value = next;
   },
-  { immediate: true }
+  { immediate: true },
 );
 const disconnectDetails = computed(() => {
   if (!connectionStore.lastDisconnectAt) return null;
@@ -42,12 +42,12 @@ const disconnectDetails = computed(() => {
 });
 const isConnected = computed(
   () =>
-    connectionStore.status === "connected" && !!connectionStore.currentDevice
+    connectionStore.status === "connected" && !!connectionStore.currentDevice,
 );
 const isConnecting = computed(() => connectionStore.status === "connecting");
 const isError = computed(() => connectionStore.status === "error");
 const canOpenConnectMenu = computed(
-  () => !isConnected.value && !isConnecting.value
+  () => !isConnected.value && !isConnecting.value,
 );
 const statusTitle = computed(() => {
   if (isConnected.value) {
@@ -91,11 +91,14 @@ async function toggleScan(): Promise<void> {
   const nextValue = !scanActive.value;
   scanActive.value = nextValue;
 
+  if (nextValue) {
+    measurementStore.clearData();
+  }
   try {
     await connectionStore.sendCommand(
       nextValue
         ? ProtocolCommandType.START_ACQUISITION
-        : ProtocolCommandType.STOP_ACQUISITION
+        : ProtocolCommandType.STOP_ACQUISITION,
     );
   } catch (err) {
     scanActive.value = !nextValue;

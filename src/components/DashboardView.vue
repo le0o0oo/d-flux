@@ -34,6 +34,8 @@ async function toggleScan(): Promise<void> {
   const nextValue = !scanActive.value;
   scanActive.value = nextValue;
 
+  if (nextValue) measurementStore.clearData();
+
   try {
     await connectionStore.sendCommand(
       nextValue

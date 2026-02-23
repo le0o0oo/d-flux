@@ -20,12 +20,12 @@ function close() {
 <template>
   <div
     data-tauri-drag-region
-    class="h-8 flex items-center justify-between bg-sidebar border-b select-none fixed top-0 left-0 right-0 z-50"
+    class="h-8 flex items-center justify-between bg-sidebar border-b select-none fixed top-0 left-0 right-0 z-99"
   >
     <div
       class="px-4 text-xs font-medium text-muted-foreground pointer-events-none"
     >
-      Testing App
+      D Flux
     </div>
     <div class="flex items-center">
       <button
