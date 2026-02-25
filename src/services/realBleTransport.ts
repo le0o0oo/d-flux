@@ -163,6 +163,7 @@ export class RealBleTransport implements BleTransport {
 
   async disconnect(): Promise<void> {
     this.connected = false;
+    await this.send(ProtocolCommandType.DISCONNECT);
 
     try {
       if (this.notifyCharacteristic) {
@@ -174,7 +175,6 @@ export class RealBleTransport implements BleTransport {
 
     try {
       await bleDisconnect();
-      await this.send(ProtocolCommandType.DISCONNECT);
     } finally {
       this.writeCharacteristic = null;
       this.notifyCharacteristic = null;

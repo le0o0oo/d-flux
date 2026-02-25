@@ -12,6 +12,7 @@ import { toast } from "vue-sonner";
 import autoAnimate from "@formkit/auto-animate";
 import type { ChartConfig } from "@/components/ui/chart";
 import { useAnalyzeStore } from "@/stores/analyzeStore";
+import config from "@/config/config";
 
 const measurementStore = useMeasurementStore();
 const analyzeStore = useAnalyzeStore();
@@ -131,6 +132,7 @@ function deleteData() {
         :y-max="co2Max"
         :chart-height="chartHeight"
         :active-tool="activeTool"
+        :precision="config.measurementCards.co2.slopePrecision"
         v-model:brush-selection="brushSelection"
         slope-measure="ppm/s"
         @open-table="openTable('co2')"
@@ -146,6 +148,7 @@ function deleteData() {
         :y-max="temperatureMax"
         :chart-height="chartHeight"
         :active-tool="activeTool"
+        :precision="config.measurementCards.temperature.slopePrecision"
         v-model:brush-selection="brushSelection"
         slope-measure="°C/s"
         @open-table="openTable('temperature')"
@@ -160,6 +163,7 @@ function deleteData() {
         :y-max="humidityMax"
         :chart-height="chartHeight"
         :active-tool="activeTool"
+        :precision="config.measurementCards.humidity.slopePrecision"
         v-model:brush-selection="brushSelection"
         slope-measure="%/s"
         @open-table="openTable('humidity')"

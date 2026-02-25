@@ -4,6 +4,7 @@ import { useMeasurementStore } from "./measurementStore";
 import { useSettingsStore } from "./settingsStore";
 import { saveFluxData as saveFluxCsv } from "@/services/fluxCsvService";
 import { getGpsProvider } from "@/services/gpsProvider";
+import { useConnectionStore } from "./connectionStore";
 
 export const useAnalyzeStore = defineStore("analyze", () => {
   const activeTool = ref<"delete" | "linear_regression" | undefined>(undefined);
@@ -21,6 +22,7 @@ export const useAnalyzeStore = defineStore("analyze", () => {
     }
 
     const measurementStore = useMeasurementStore();
+    const connectionStore = useConnectionStore();
 
     return saveFluxCsv({
       data: measurementStore.data,
@@ -30,6 +32,7 @@ export const useAnalyzeStore = defineStore("analyze", () => {
         uri: settingsStore.saveFolderUri,
       },
       gpsLocation: gpsProvider.getLocation(),
+      sensorName: connectionStore.currentDevice?.name || "Unknown",
     });
   }
 

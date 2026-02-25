@@ -2,12 +2,15 @@ import type { SensorData } from "@/services/ProtocolParser";
 import { linearRegression } from "@/services/linearRegression";
 import { getFs, type FolderRef } from "@/services/filesystem";
 import type { GpsLocation } from "@/services/gpsProvider";
+import config from "@/config/config";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 const FILE_NAME = "flux_data.csv";
 
 const CSV_HEADER = [
   "Timestamp",
   "Date",
+  "Sensor",
   "Longitude",
   "Latitude",
   "CO₂ Slope",
@@ -18,11 +21,14 @@ const CSV_HEADER = [
   "Temperature Max",
   "Humidity Min",
   "Humidity Max",
+  "CO2 Multiplier",
+  "CO2 Offset",
 ].join(",");
 
 export interface FluxRow {
   timestamp: number;
   date: string;
+  sensorName: string;
   longitude: number;
   latitude: number;
   co2Slope: number;
@@ -33,6 +39,8 @@ export interface FluxRow {
   tempMax: number;
   humMin: number;
   humMax: number;
+  co2Multiplier: number;
+  co2Offset: number;
 }
 
 function meanOf(values: number[]): number {
@@ -49,7 +57,8 @@ function minMax(data: SensorData[], key: "co2" | "temperature" | "humidity") {
 function buildFluxRow(
   data: SensorData[],
   brushSelection: [number, number],
-  gpsLocation: GpsLocation
+  gpsLocation: GpsLocation,
+  sensorName: string,
 ): FluxRow | null {
   const lo = Math.min(...brushSelection);
   const hi = Math.max(...brushSelection);
@@ -72,6 +81,10 @@ function buildFluxRow(
   const temp = minMax(selected, "temperature");
   const hum = minMax(selected, "humidity");
   const now = new Date();
+  const settingsStore = useSettingsStore();
+  const co2Multiplier =
+    settingsStore.deviceSettings.settings.co2CalibrationMultiplier;
+  const co2Offset = settingsStore.deviceSettings.settings.co2CalibrationOffset;
 
   const dataLongitude = +meanOf(selected.map((d) => d.longitude ?? 0));
   const dataLatitude = +meanOf(selected.map((d) => d.latitude ?? 0));
@@ -84,9 +97,12 @@ function buildFluxRow(
   return {
     timestamp: now.getTime(),
     date: now.toISOString(),
+    sensorName,
     longitude,
     latitude,
-    co2Slope: +(regression.slope * 1000).toFixed(1),
+    co2Slope: +(regression.slope * 1000).toFixed(
+      config.measurementCards.co2.slopePrecision,
+    ),
     co2R2: regression.rSquared,
     co2Min: co2.min,
     co2Max: co2.max,
@@ -94,6 +110,8 @@ function buildFluxRow(
     tempMax: temp.max,
     humMin: hum.min,
     humMax: hum.max,
+    co2Multiplier,
+    co2Offset,
   };
 }
 
@@ -101,6 +119,7 @@ function formatRow(row: FluxRow): string {
   return [
     row.timestamp,
     row.date,
+    row.sensorName,
     row.longitude,
     row.latitude,
     row.co2Slope,
@@ -111,6 +130,8 @@ function formatRow(row: FluxRow): string {
     row.tempMax,
     row.humMin,
     row.humMax,
+    row.co2Multiplier,
+    row.co2Offset,
   ].join(",");
 }
 
@@ -139,10 +160,11 @@ export async function saveFluxData(params: {
   brushSelection: [number, number];
   folder: FolderRef;
   gpsLocation: GpsLocation;
+  sensorName: string;
 }): Promise<string> {
-  const { data, brushSelection, folder, gpsLocation } = params;
+  const { data, brushSelection, folder, gpsLocation, sensorName } = params;
 
-  const row = buildFluxRow(data, brushSelection, gpsLocation);
+  const row = buildFluxRow(data, brushSelection, gpsLocation, sensorName);
   if (!row) throw new Error("Not enough data in selection");
 
   return appendRow(folder, row);
@@ -150,21 +172,27 @@ export async function saveFluxData(params: {
 
 function parseRow(line: string): FluxRow | null {
   const cols = line.split(",");
-  if (cols.length < 12) return null;
+  if (cols.length < 13) return null;
+
+  const parsedMultiplier = Number(cols[13] ?? 1);
+  const parsedOffset = Number(cols[14] ?? 0);
 
   const row: FluxRow = {
     timestamp: Number(cols[0]),
     date: cols[1],
-    longitude: Number(cols[2]),
-    latitude: Number(cols[3]),
-    co2Slope: Number(cols[4]),
-    co2R2: Number(cols[5]),
-    co2Min: Number(cols[6]),
-    co2Max: Number(cols[7]),
-    tempMin: Number(cols[8]),
-    tempMax: Number(cols[9]),
-    humMin: Number(cols[10]),
-    humMax: Number(cols[11]),
+    sensorName: String(cols[2]),
+    longitude: Number(cols[3]),
+    latitude: Number(cols[4]),
+    co2Slope: Number(cols[5]),
+    co2R2: Number(cols[6]),
+    co2Min: Number(cols[7]),
+    co2Max: Number(cols[8]),
+    tempMin: Number(cols[9]),
+    tempMax: Number(cols[10]),
+    humMin: Number(cols[11]),
+    humMax: Number(cols[12]),
+    co2Multiplier: Number.isFinite(parsedMultiplier) ? parsedMultiplier : 1,
+    co2Offset: Number.isFinite(parsedOffset) ? parsedOffset : 0,
   };
 
   if (!Number.isFinite(row.latitude) || !Number.isFinite(row.longitude))

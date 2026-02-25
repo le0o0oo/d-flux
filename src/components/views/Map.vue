@@ -32,8 +32,11 @@ function buildPopup(row: FluxRow): string {
     <div style="min-width:200px;font-size:13px;line-height:1.6">
       <strong style="font-size:14px">${date}</strong>
       <hr style="margin:4px 0;border-color:#e5e7eb"/>
+      <div><b>Device:</b> ${row.sensorName}</div>
       <div><b>CO₂ Slope:</b> ${row.co2Slope} ppm/s</div>
       <div><b>CO₂ R²:</b> ${row.co2R2.toFixed(4)}</div>
+      <div><b>CO₂ Multiplier:</b> ${row.co2Multiplier}</div>
+      <div><b>CO₂ Offset:</b> ${row.co2Offset}</div>
       <div><b>CO₂:</b> ${row.co2Min} – ${row.co2Max} ppm</div>
       <div><b>Temp:</b> ${row.tempMin} – ${row.tempMax} °C</div>
       <div><b>Humidity:</b> ${row.humMin} – ${row.humMax} %</div>

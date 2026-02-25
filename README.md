@@ -64,7 +64,7 @@ HEADER PAYLOAD\n
 
 ```bash
 git clone <repository-url>
-cd testing-app
+cd d-flux
 ```
 
 2. Install dependencies:

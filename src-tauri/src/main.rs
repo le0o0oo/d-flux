@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    sensors_app_lib::run()
+    d_flux_lib::run()
 }

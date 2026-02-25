@@ -39,8 +39,7 @@ async function chooseSaveFolder() {
         <div class="space-y-0.5">
           <label class="text-base font-medium">Appearance</label>
           <p class="text-sm text-muted-foreground">
-            Customize the appearance of the app. Automatically switch between
-            day and night themes.
+            Customize the appearance of the app.
           </p>
         </div>
         <ModeToggle />

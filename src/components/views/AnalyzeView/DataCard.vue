@@ -36,6 +36,7 @@ const props = defineProps<{
   activeTool?: "linear_regression" | "delete";
   brushSelection?: [number, number] | null;
   slopeMeasure?: string;
+  precision?: number;
 }>();
 
 const processedData = computed(() => {
@@ -296,7 +297,7 @@ onMounted(() => {
       >
         <span class="font-semibold text-muted-foreground">Slope</span>
         <span class="font-mono text-base"
-          >{{ (Number(formattedSlope) * 1000).toFixed(1) }}
+          >{{ (Number(formattedSlope) * 1000).toFixed(precision ?? 2) }}
           {{ slopeMeasure }}</span
         >
       </div>
