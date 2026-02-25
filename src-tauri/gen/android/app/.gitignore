@@ -1,4 +1,4 @@
-/src/main/java/org/ingv/d_flux/generated
+/src/main/java/org/ingv/dflux/generated
 /src/main/jniLibs/**/*.so
 /src/main/assets/tauri.conf.json
 /tauri.build.gradle.kts

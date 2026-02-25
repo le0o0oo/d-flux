@@ -671,25 +671,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "d-flux"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-android-fs",
- "tauri-plugin-blec",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-geolocation",
- "tauri-plugin-opener",
- "tauri-plugin-os",
- "tauri-plugin-shell",
- "tokio",
-]
-
-[[package]]
 name = "darling"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -796,6 +777,25 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.115",
+]
+
+[[package]]
+name = "dflux"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-android-fs",
+ "tauri-plugin-blec",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-geolocation",
+ "tauri-plugin-opener",
+ "tauri-plugin-os",
+ "tauri-plugin-shell",
+ "tokio",
 ]
 
 [[package]]
