@@ -1,0 +1,45 @@
+# File System Access — Always Use `getFs()` from `filesystem.ts`
+
+This is a cross-platform Tauri app (Desktop + Android). Android uses content URIs and the `AndroidFs` plugin, NOT regular file paths.
+
+## Rule
+
+**NEVER** import or use `@tauri-apps/plugin-fs` (`readTextFile`, `writeTextFile`, `exists`, `mkdir`) or `@tauri-apps/api/path` (`join`) directly in services, stores, or components.
+
+**ALWAYS** use the `FsService` abstraction via `getFs()` from `@/services/filesystem`.
+
+```typescript
+// ❌ BAD — breaks on Android
+import { readTextFile, writeTextFile, exists } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
+const filePath = await join(folderPath, "data.csv");
+await writeTextFile(filePath, content);
+
+// ✅ GOOD — works on all platforms
+import { getFs, type FolderRef } from "@/services/filesystem";
+await getFs().writeTextFile({ folder, fileName: "data.csv", content, mimeType: "text/csv" });
+const data = await getFs().readTextFile({ folder, fileName: "data.csv" });
+```
+
+## Available `FsService` Methods
+
+- `saveTextFile` — create a new file (with optional deduplication)
+- `writeTextFile` — create or overwrite a file by name
+- `readTextFile` — read a file by name, returns `null` if not found
+- `pickFolder` — open folder picker dialog
+- `initDefaultFolder` — validate/initialize save folder
+
+## Folder References
+
+Always pass `FolderRef` (from settings store), not bare path strings:
+
+```typescript
+const folder: FolderRef = {
+  path: settingsStore.saveFolderPath,
+  uri: settingsStore.saveFolderUri,   // required for Android picked dirs
+};
+```
+
+## Where to Add New FS Methods
+
+If you need a new file operation, add it to the `FsService` interface in `filesystem.ts` and implement it in **both** `DesktopFsService` and `AndroidFsService`.

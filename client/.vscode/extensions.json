@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "tauri-apps.tauri-vscode",
+    "aaron-bond.better-comments",
+    "tamasfe.even-better-toml",
+    "antfu.iconify",
+    "bradlc.vscode-tailwindcss",
+    "rust-lang.rust-analyzer"
+  ]
+}

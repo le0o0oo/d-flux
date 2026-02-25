@@ -70,6 +70,9 @@ jobs:
           - windows-latest
 
     runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        working-directory: client
 
     steps:
       - name: Checkout repository
@@ -93,6 +96,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -104,15 +108,16 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: |
-            src-tauri -> target
+            client/src-tauri -> client/src-tauri/target
 
       - name: Build and upload desktop release assets
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          projectPath: client
           tagName: ${{ needs.prepare.outputs.tag }}
-          releaseName: Sensors App ${{ needs.prepare.outputs.tag }}
+          releaseName: D Flux ${{ needs.prepare.outputs.tag }}
           releaseDraft: ${{ needs.prepare.outputs.draft == 'true' }}
           prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
 
@@ -122,9 +127,10 @@ jobs:
         with:
           name: desktop-${{ matrix.platform }}
           path: |
-            src-tauri/target/release/bundle/**
-            src-tauri/target/release/*.exe
-            src-tauri/target/release/sensors-app
+            client/src-tauri/target/release/bundle/**
+            client/src-tauri/target/release/*.exe
+            client/src-tauri/target/release/dflux
+            client/src-tauri/target/release/sensors-app
           if-no-files-found: warn
 
   android:
@@ -133,6 +139,9 @@ jobs:
       - prepare
       - desktop
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: client
 
     steps:
       - name: Checkout repository
@@ -181,6 +190,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -195,7 +205,7 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: |
-            src-tauri -> target
+            client/src-tauri -> client/src-tauri/target
 
       - name: Build Tauri Android app
         run: pnpm tauri android build --ci
@@ -206,8 +216,8 @@ jobs:
         with:
           name: android-build
           path: |
-            src-tauri/gen/android/app/build/outputs/**/*.apk
-            src-tauri/gen/android/app/build/outputs/**/*.aab
+            client/src-tauri/gen/android/app/build/outputs/**/*.apk
+            client/src-tauri/gen/android/app/build/outputs/**/*.aab
           if-no-files-found: warn
 
       - name: Upload Android assets to GitHub Release
@@ -219,6 +229,6 @@ jobs:
           draft: ${{ needs.prepare.outputs.draft == 'true' }}
           prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
           files: |
-            src-tauri/gen/android/app/build/outputs/**/*.apk
-            src-tauri/gen/android/app/build/outputs/**/*.aab
+            client/src-tauri/gen/android/app/build/outputs/**/*.apk
+            client/src-tauri/gen/android/app/build/outputs/**/*.aab
           fail_on_unmatched_files: true
