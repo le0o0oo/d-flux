@@ -1,4 +1,4 @@
-package com.leo.sensors_app
+package org.ingv.dflux
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
