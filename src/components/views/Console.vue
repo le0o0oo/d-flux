@@ -36,7 +36,7 @@ const commandOptions = [
   ProtocolCommandType.DISCONNECT,
   ProtocolCommandType.GET_SETTINGS,
   ProtocolCommandType.SET_SETTINGS,
-  ProtocolCommandType.SET_HW_CALIBRATION_REF,
+  // ProtocolCommandType.SET_HW_CALIBRATION_REF, // Preferred to change in settings
   ProtocolCommandType.GET_HW_CALIBRATION_REF,
 ];
 const appendNewline = computed(() => appendNewlineMode.value === "append");
