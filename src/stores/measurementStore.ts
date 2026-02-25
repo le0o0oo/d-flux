@@ -126,6 +126,11 @@ export const useMeasurementStore = defineStore("measurement", () => {
 
         settingsStore.deviceSettings.applied = true;
         break;
+
+      case ProtocolEventType.HW_CALIBRATION_REF:
+        settingsStore.deviceSettings.settings.hardwareCalibrationReference =
+          parseInt(parsed.payload);
+        break;
     }
   }
 

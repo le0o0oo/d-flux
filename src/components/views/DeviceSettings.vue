@@ -14,11 +14,26 @@ import { Spinner } from "../ui/spinner";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { ProtocolCommandType } from "@/services/ProtocolParser";
 import { useMeasurementStore } from "@/stores/measurementStore";
+import { Badge } from "@/components/ui/badge";
+import { Icon } from "@iconify/vue";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const settingsStore = useSettingsStore();
 const connectionStore = useConnectionStore();
 const measurementStore = useMeasurementStore();
 const saving = ref(false);
+
+const forcedCalibrationUnlocked = ref(false);
+const calibrationDialogOpen = ref(false);
 
 // Current form values
 const currentOffset = ref(
@@ -26,6 +41,9 @@ const currentOffset = ref(
 );
 const currentMultiplier = ref(
   settingsStore.deviceSettings.settings.co2CalibrationMultiplier,
+);
+const currentHwCalibrationReference = ref(
+  settingsStore.deviceSettings.settings.hardwareCalibrationReference,
 );
 
 // Check if values are synchronized with store
@@ -53,11 +71,23 @@ const handleSave = async () => {
   settingsStore.deviceSettings.applied = true;
   saving.value = false;
 };
+
+const applyHwCalibration = async () => {
+  saving.value = true;
+  await connectionStore.sendCommand(
+    ProtocolCommandType.SET_HW_CALIBRATION_REF,
+    String(currentHwCalibrationReference.value),
+  );
+
+  settingsStore.deviceSettings.applied = true;
+  saving.value = false;
+  forcedCalibrationUnlocked.value = false;
+};
 </script>
 
 <template>
   <div class="space-y-4">
-    <fieldset :disabled="measurementStore.isAcquiring">
+    <fieldset :disabled="measurementStore.isAcquiring" class="space-y-4">
       <div class="flex justify-between items-center mb-2">
         <p>Device settings</p>
         <Button
@@ -68,7 +98,11 @@ const handleSave = async () => {
       </div>
       <div class="rounded-lg border p-4 space-y-3">
         <div class="space-y-0.5">
-          <Label class="text-base font-medium">CO₂ calibration</Label>
+          <div class="flex items-center justify-between">
+            <Label class="text-base font-medium">CO₂ calibration</Label>
+
+            <Badge variant="secondary"> Software </Badge>
+          </div>
           <p class="text-sm text-muted-foreground">
             Adjust the offset and multiplier applied to the CO₂ values. The
             multiplier is applied first, followed by the offset.
@@ -116,6 +150,77 @@ const handleSave = async () => {
           </div>
         </div>
       </div>
+
+      <div class="rounded-lg border p-4 space-y-3">
+        <div class="space-y-0.5">
+          <div class="flex items-center justify-between">
+            <Label class="text-base font-medium"
+              >CO₂ hardware calibration</Label
+            >
+
+            <Badge variant="secondary"> Hardware </Badge>
+          </div>
+          <p class="text-sm text-muted-foreground">
+            Adjust the forced calibration reference via hardware.
+          </p>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <div class="w-full">
+            <NumberField
+              id="forced-calibration-reference"
+              :disabled="
+                measurementStore.isAcquiring || !forcedCalibrationUnlocked
+              "
+              v-model="currentHwCalibrationReference"
+              :step="1"
+              :min="400"
+              :max="2000"
+              class="w-full"
+            >
+              <Label for="forced-calibration-reference"
+                >Calibration reference</Label
+              >
+              <NumberFieldContent>
+                <NumberFieldDecrement />
+                <NumberFieldInput />
+                <NumberFieldIncrement />
+              </NumberFieldContent>
+            </NumberField>
+          </div>
+
+          <Button
+            @click="calibrationDialogOpen = true"
+            v-if="!forcedCalibrationUnlocked"
+            ><Icon icon="lucide:lock-keyhole" /> Unlock</Button
+          >
+          <Button v-else @click="applyHwCalibration"
+            ><Icon icon="lucide:check" :disabled="saving" /> Apply</Button
+          >
+        </div>
+      </div>
     </fieldset>
+
+    <AlertDialog v-model:open="calibrationDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>⚠️ Warning</AlertDialogTitle>
+          <AlertDialogDescription>
+            You are about to adjust the
+            <strong>hardware calibration</strong>. Incorrect values can
+            permanently skew CO₂ readings. Proceed only if you know the
+            reference CO₂ level.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-yellow-600 dark:bg-yellow-400"
+            @click="forcedCalibrationUnlocked = true"
+            >Continue</AlertDialogAction
+          >
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

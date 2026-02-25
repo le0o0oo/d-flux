@@ -25,19 +25,6 @@ const rawPayload = ref("");
 const appendNewlineMode = ref<"append" | "none">("append");
 const logViewport = ref<HTMLElement | null>(null);
 
-const statusLabel = computed(() => {
-  switch (connectionStore.status) {
-    case "connected":
-      return "Connected";
-    case "connecting":
-      return "Connecting";
-    case "error":
-      return "Error";
-    default:
-      return "Idle";
-  }
-});
-
 const consoleLines = computed(() => connectionStore.console ?? []);
 const isConnected = computed(() => connectionStore.isConnected);
 
@@ -49,6 +36,8 @@ const commandOptions = [
   ProtocolCommandType.DISCONNECT,
   ProtocolCommandType.GET_SETTINGS,
   ProtocolCommandType.SET_SETTINGS,
+  ProtocolCommandType.SET_HW_CALIBRATION_REF,
+  ProtocolCommandType.GET_HW_CALIBRATION_REF,
 ];
 const appendNewline = computed(() => appendNewlineMode.value === "append");
 

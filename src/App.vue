@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useAppStore } from "./stores/appStore";
-import type { BleDevice } from "@/services/transport";
+import { type BleDevice } from "@/services/transport";
 import { platform } from "@tauri-apps/plugin-os";
 import SetupFlow from "./components/setup/SetupFlow.vue";
 import { getGpsProvider } from "./services/gpsProvider";
@@ -29,6 +29,8 @@ import { Button } from "./components/ui/button";
 import Map from "./components/views/Map.vue";
 import { Icon } from "@iconify/vue";
 import { open } from "@tauri-apps/plugin-shell";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 const scannerContainer = ref<HTMLElement | null>(null);
 const parentContainer = ref<HTMLElement | null>(null);
@@ -40,6 +42,12 @@ const appStore = useAppStore();
 const mapOpen = ref(false);
 const settingsOpen = ref(false);
 const lastSelectedDeviceKey = ref<string | null>(null);
+
+const isClosing = ref(false);
+let allowWindowClose = false;
+let closeFlowPromise: Promise<void> | null = null;
+let unlistenCloseRequested: UnlistenFn | null = null;
+let unlistenRustCloseRequested: UnlistenFn | null = null;
 
 const startSetupFrom = ref<"folder" | "permissions" | undefined>(undefined);
 
@@ -95,7 +103,11 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(async () => {
-  await connectionStore.disconnect();
+  unlistenCloseRequested?.();
+  unlistenRustCloseRequested?.();
+  if (connectionStore.isConnected || connectionStore.isConnecting) {
+    await connectionStore.disconnect();
+  }
 });
 
 async function handleConnect(device: BleDevice) {
@@ -142,6 +154,54 @@ document.addEventListener("click", async (e) => {
     await open(url);
   }
 });
+
+async function setupCloseHandler() {
+  const win = getCurrentWindow();
+
+  async function disconnectBeforeClose() {
+    if (closeFlowPromise) {
+      return closeFlowPromise;
+    }
+
+    closeFlowPromise = (async () => {
+      if (connectionStore.isConnected || connectionStore.isConnecting) {
+        await connectionStore.disconnect();
+      }
+    })().finally(() => {
+      closeFlowPromise = null;
+    });
+
+    return closeFlowPromise;
+  }
+
+  async function closeAfterDisconnect() {
+    if (allowWindowClose) return;
+
+    isClosing.value = true;
+    try {
+      await disconnectBeforeClose();
+      allowWindowClose = true;
+      await win.close();
+    } finally {
+      isClosing.value = false;
+    }
+  }
+
+  unlistenCloseRequested = await win.onCloseRequested(async (event) => {
+    if (allowWindowClose) return;
+    event.preventDefault();
+    await closeAfterDisconnect();
+  });
+
+  unlistenRustCloseRequested = await listen("app-close-requested", async () => {
+    await closeAfterDisconnect();
+  });
+
+  // if you ever need to remove the handler:
+  // unlisten()
+}
+
+setupCloseHandler();
 </script>
 
 <template>
@@ -204,6 +264,16 @@ document.addEventListener("click", async (e) => {
                     : ""
                 }}...
               </span>
+            </div>
+          </div>
+
+          <div
+            v-if="isClosing"
+            class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md"
+          >
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <Spinner class="w-4 h-4" />
+              <span class="truncate max-w-[70vw]"> Disconnecting </span>
             </div>
           </div>
         </div>

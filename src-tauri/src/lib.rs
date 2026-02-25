@@ -1,6 +1,14 @@
+use tauri::{Emitter, WindowEvent};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { .. } = event {
+                println!("Closing");
+                let _ = window.emit("app-close-requested", ());
+            }
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_geolocation::init())
         .plugin(tauri_plugin_fs::init())

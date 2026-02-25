@@ -4,6 +4,7 @@ export enum ProtocolEventType {
   ACQUISITION_STATE = "ACQUISITION_STATE",
   ERROR = "ERROR",
   SETTINGS = "SETTINGS",
+  HW_CALIBRATION_REF = "HW_CALIBRATION_REF",
 }
 
 export enum ProtocolCommandType {
@@ -14,6 +15,8 @@ export enum ProtocolCommandType {
   DISCONNECT = "DISCONNECT",
   GET_SETTINGS = "GET_SETTINGS",
   SET_SETTINGS = "SET_SETTINGS",
+  SET_HW_CALIBRATION_REF = "SET_HW_CALIBRATION_REF",
+  GET_HW_CALIBRATION_REF = "GET_HW_CALIBRATION_REF",
 }
 
 export interface SensorData {

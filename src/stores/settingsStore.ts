@@ -38,6 +38,8 @@ export const useSettingsStore = defineStore("settings", {
       settings: {
         co2CalibrationOffset: 0.0,
         co2CalibrationMultiplier: 1.0,
+
+        hardwareCalibrationReference: 400,
       },
     },
   }),
