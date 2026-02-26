@@ -1,8 +1,15 @@
 import { defineStore } from "pinia";
 import { useMeasurementStore } from "./measurementStore";
-import { ProtocolCommandType } from "@/services/ProtocolParser";
+import {
+  ProtocolCommandType,
+  ProtocolEventType,
+  ProtocolParser,
+} from "@/services/ProtocolParser";
 import { getTransport } from "@/services/transport";
 import type { BleDevice } from "@/services/transport";
+
+const INIT_REQUEST_RETRY_INTERVAL_MS = 1200;
+const INIT_REQUEST_MAX_ATTEMPTS = 5;
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -51,6 +58,8 @@ export const useConnectionStore = defineStore("connection", {
     manualDisconnectRequested: false,
     console: [] as string[],
     rxBuffer: "",
+    pendingInitSettings: false,
+    pendingInitHwCalibrationRef: false,
   }),
   getters: {
     isConnected: (state) => state.status === "connected",
@@ -72,8 +81,27 @@ export const useConnectionStore = defineStore("connection", {
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
+
+        const parsed = ProtocolParser.parseLine(trimmed);
+        if (parsed?.type === ProtocolEventType.SETTINGS) {
+          this.pendingInitSettings = false;
+        } else if (parsed?.type === ProtocolEventType.HW_CALIBRATION_REF) {
+          this.pendingInitHwCalibrationRef = false;
+        }
+
         this.console.push(trimmed);
         measurementStore.ingestLine(trimmed);
+      }
+    },
+
+    async requestMissingInitData() {
+      if (this.pendingInitSettings) {
+        await this.sendProtocolCommand(ProtocolCommandType.GET_SETTINGS);
+      }
+      if (this.pendingInitHwCalibrationRef) {
+        await this.sendProtocolCommand(
+          ProtocolCommandType.GET_HW_CALIBRATION_REF,
+        );
       }
     },
 
@@ -94,6 +122,8 @@ export const useConnectionStore = defineStore("connection", {
       this.manualDisconnectRequested = false;
       this.currentDevice = toConnectedDevice(device, address);
       this.rxBuffer = "";
+      this.pendingInitSettings = false;
+      this.pendingInitHwCalibrationRef = false;
 
       const measurementStore = useMeasurementStore();
       if (this.currentDevice.name) {
@@ -107,14 +137,30 @@ export const useConnectionStore = defineStore("connection", {
           onDisconnect: () => void this.handleBleDisconnected(false),
           onData: (chunk) => this.handleIncomingData(chunk),
         });
+
+        this.pendingInitSettings = true;
+        this.pendingInitHwCalibrationRef = true;
+
+        for (let attempt = 0; attempt < INIT_REQUEST_MAX_ATTEMPTS; attempt++) {
+          await this.requestMissingInitData();
+
+          if (!this.pendingInitSettings && !this.pendingInitHwCalibrationRef) {
+            break;
+          }
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, INIT_REQUEST_RETRY_INTERVAL_MS),
+          );
+        }
+
         this.status = "connected";
-        await getTransport().send(ProtocolCommandType.GET_SETTINGS);
-        await getTransport().send(ProtocolCommandType.GET_HW_CALIBRATION_REF);
       } catch (err) {
         this.currentDevice = null;
         this.status = "error";
         this.lastError = err instanceof Error ? err.message : String(err);
         this.rxBuffer = "";
+        this.pendingInitSettings = false;
+        this.pendingInitHwCalibrationRef = false;
         throw err;
       }
     },
@@ -133,6 +179,8 @@ export const useConnectionStore = defineStore("connection", {
       this.lastError = null;
       this.lastDisconnectAt = Date.now();
       this.rxBuffer = "";
+      this.pendingInitSettings = false;
+      this.pendingInitHwCalibrationRef = false;
 
       if (wasConnected && !wasManual) {
         this.lastDisconnectMessage = "Device disconnected unexpectedly";
@@ -169,6 +217,10 @@ export const useConnectionStore = defineStore("connection", {
 
     async sendRaw(message: string, appendNewline = true) {
       if (!this.isConnected) return;
+      await this.sendProtocolCommand(message, appendNewline);
+    },
+
+    async sendProtocolCommand(message: string, appendNewline = true) {
       const payload = appendNewline ? `${message}\n` : message;
       this.console.push(`TX: ${message}`);
       await getTransport().send(payload);

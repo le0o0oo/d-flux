@@ -162,7 +162,7 @@ export class RealBleTransport implements BleTransport {
 
   async disconnect(): Promise<void> {
     this.connected = false;
-    await this.send(ProtocolCommandType.DISCONNECT);
+    await this.send(ProtocolCommandType.DISCONNECT + "\n");
 
     try {
       if (this.notifyCharacteristic) {
