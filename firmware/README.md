@@ -30,6 +30,19 @@ adds GPS metadata, performs analysis, and exports datasets.
   a flux chamber lid or pump.
 - **Status LED**: Simple connection on `LED_PIN` (GPIO 2) for connection state.
 
+### Wiring & Pinout
+
+| Component | Pin Name | ESP32 GPIO | Notes                                      |
+| --------- | -------- | ---------- | ------------------------------------------ |
+| **SCD30** | SDA      | GPIO 21    | Default I²C Data                           |
+| **SCD30** | SCL      | GPIO 22    | Default I²C Clock                          |
+| **SCD30** | VIN      | 3.3V       | Check your specific module's voltage range |
+| **SCD30** | GND      | GND        | Common ground                              |
+| **Servo** | Signal   | GPIO 12    | PWM control channel 0                      |
+| **Servo** | VCC      | 5V         | High current draw; consider external power |
+| **Servo** | GND      | GND        | Common ground                              |
+| **LED**   | Anode    | GPIO 2     | Connection status (Built-in on DevKit V1)  |
+
 ## Firmware Features
 
 ### Data pipeline
@@ -67,26 +80,26 @@ adds GPS metadata, performs analysis, and exports datasets.
 
 ## BLE Service & Protocol
 
-| Item              | UUID / Description                                                      |
-| ----------------- | ----------------------------------------------------------------------- |
-| Service UUID      | `DB594551-159C-4DA8-B59E-1C98587348E1`                                  |
-| RX Characteristic | `7B6B12CD-CA54-46A6-B3F4-3A848A3ED00B` (WRITE, WRITE_NR) – App → ESP32  |
-| TX Characteristic | `907BAC5D-92ED-4D90-905E-A3A7B9899F21` (READ, NOTIFY) – ESP32 → App     |
-| Manufacturer data | `companyId=0xB71E` + `ID=<DEVICE_ID>;ORG=<DEVICE_ORG>;FW=<DEVICE_FW>`    |
+| Item              | UUID / Description                                                     |
+| ----------------- | ---------------------------------------------------------------------- |
+| Service UUID      | `DB594551-159C-4DA8-B59E-1C98587348E1`                                 |
+| RX Characteristic | `7B6B12CD-CA54-46A6-B3F4-3A848A3ED00B` (WRITE, WRITE_NR) - App → ESP32 |
+| TX Characteristic | `907BAC5D-92ED-4D90-905E-A3A7B9899F21` (READ, NOTIFY) - ESP32 → App    |
+| Manufacturer data | `companyId=0xB71E` + `ID=<DEVICE_ID>;ORG=<DEVICE_ORG>;FW=<DEVICE_FW>`  |
 
 ### Command list
 
-| Command                 | Direction | Description |
-| ----------------------- | --------- | ----------- |
-| `WHOIS`                 | App → ESP32 | Returns probe metadata (ID/ORG/FW). |
-| `START_ACQUISITION`     | App → ESP32 | Enables servo spin and begins sensor streaming. |
-| `STOP_ACQUISITION`      | App → ESP32 | Stops servo and pauses streaming. |
-| `GET_ACQUISITION_STATE` | App → ESP32 | Returns `0`/`1` depending on active session. |
-| `DISCONNECT`            | App → ESP32 | Forces current BLE link to close. |
-| `GET_SETTINGS`          | App → ESP32 | Reads stored settings (offset, multiplier). |
-| `SET_SETTINGS key=val;` | App → ESP32 | Updates persisted settings. Multiple `key=value;` pairs allowed. |
-| `SET_HW_CALIBRATION_REF <value>` | App → ESP32 | Forces SCD30 calibration reference (400-2000 ppm) and confirms. |
-| `GET_HW_CALIBRATION_REF`| App → ESP32 | Returns current forced calibration reference from the sensor. |
+| Command                          | Direction   | Description                                                      |
+| -------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `WHOIS`                          | App → ESP32 | Returns probe metadata (ID/ORG/FW).                              |
+| `START_ACQUISITION`              | App → ESP32 | Enables servo spin and begins sensor streaming.                  |
+| `STOP_ACQUISITION`               | App → ESP32 | Stops servo and pauses streaming.                                |
+| `GET_ACQUISITION_STATE`          | App → ESP32 | Returns `0`/`1` depending on active session.                     |
+| `DISCONNECT`                     | App → ESP32 | Forces current BLE link to close.                                |
+| `GET_SETTINGS`                   | App → ESP32 | Reads stored settings (offset, multiplier).                      |
+| `SET_SETTINGS key=val;`          | App → ESP32 | Updates persisted settings. Multiple `key=value;` pairs allowed. |
+| `SET_HW_CALIBRATION_REF <value>` | App → ESP32 | Forces SCD30 calibration reference (400-2000 ppm) and confirms.  |
+| `GET_HW_CALIBRATION_REF`         | App → ESP32 | Returns current forced calibration reference from the sensor.    |
 
 ### Data frames
 
@@ -133,6 +146,7 @@ If you prefer VS Code, open the folder with the PlatformIO extension and use the
 
 > **Clangd tip**: If IntelliSense loses track of includes, regenerate the
 > compilation database and restart clangd:
+>
 > ```bash
 > pio run --target compiledb
 > ```
@@ -154,12 +168,12 @@ If you prefer VS Code, open the folder with the PlatformIO extension and use the
 
 ## Troubleshooting
 
-| Symptom | Possible fix |
-| ------- | ------------- |
-| Serial log shows `Failed to find SCD30` | Check I²C wiring (SDA/SCL), ensure sensor is powered, and confirm the address (0x61). |
-| BLE client cannot find the probe | Verify advertising is running (`BLE Advertising started` in logs), ensure no lingering bonds (the firmware deletes all on boot), and confirm device is powered. |
-| No `DATA` frames are received | Confirm `START_ACQUISITION` was issued, check that the SCD30 has fresh data (`dataReady()`), and verify connection is active. |
-| Servo spins unexpectedly | Inspect command log; `START_ACQUISITION` automatically attaches the servo. Modify `commands.cpp` if you need decoupled control. |
+| Symptom                                 | Possible fix                                                                                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Serial log shows `Failed to find SCD30` | Check I²C wiring (SDA/SCL), ensure sensor is powered, and confirm the address (0x61).                                                                           |
+| BLE client cannot find the probe        | Verify advertising is running (`BLE Advertising started` in logs), ensure no lingering bonds (the firmware deletes all on boot), and confirm device is powered. |
+| No `DATA` frames are received           | Confirm `START_ACQUISITION` was issued, check that the SCD30 has fresh data (`dataReady()`), and verify connection is active.                                   |
+| Servo spins unexpectedly                | Inspect command log; `START_ACQUISITION` automatically attaches the servo. Modify `commands.cpp` if you need decoupled control.                                 |
 
 ## Project Structure
 
