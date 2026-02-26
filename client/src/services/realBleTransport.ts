@@ -151,8 +151,6 @@ export class RealBleTransport implements BleTransport {
     await subscribeString(this.notifyCharacteristic, (data: string) => {
       params.onData(data);
     });
-    await this.send(ProtocolCommandType.GET_SETTINGS);
-    await this.send(ProtocolCommandType.GET_HW_CALIBRATION_REF);
   }
 
   async send(message: string): Promise<void> {

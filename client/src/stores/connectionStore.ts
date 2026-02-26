@@ -108,6 +108,8 @@ export const useConnectionStore = defineStore("connection", {
           onData: (chunk) => this.handleIncomingData(chunk),
         });
         this.status = "connected";
+        await getTransport().send(ProtocolCommandType.GET_SETTINGS);
+        await getTransport().send(ProtocolCommandType.GET_HW_CALIBRATION_REF);
       } catch (err) {
         this.currentDevice = null;
         this.status = "error";
