@@ -2,6 +2,8 @@
 
 A cross-platform application for acquiring and analyzing environmental data from ESP32 microcontrollers equipped with CO₂ sensors (SCD30) via Bluetooth Low Energy (BLE).
 
+![D Flux](../img/d-flux-client.png)
+
 ## Overview
 
 This project consists of two main components:
@@ -17,8 +19,11 @@ This project consists of two main components:
 - **Real-time Data Acquisition**: Receives CO₂ concentration, temperature, and relative humidity data
 - **GPS Integration**: Automatically enriches data with GPS coordinates on mobile devices
 - **Data Export**: Export acquisition sessions to CSV format for further analysis
-- **Data Analysis**: Perform linear regression analysis with slope and R² calculations
-- **Mapping**: Visualize measurement locations on an interactive map powered by Leaflet
+- **Flux Analysis**: Perform linear regression analysis on selected data ranges to calculate CO₂ flux (slope), R², and min/max stats
+- **Interactive Mapping**: Visualize measurement locations on an interactive map powered by Leaflet
+- **Calibration**:
+  - **Software Calibration**: Apply Offset and Multiplier to CO₂ readings on the client side
+  - **Hardware Calibration**: Trigger forced recalibration (FRC) on the SCD30 sensor
 - **Console**: Send raw commands to ESP32 devices for advanced control
 
 ### Technical Architecture
@@ -43,12 +48,23 @@ The application uses a simple line-based text protocol:
 HEADER PAYLOAD\n
 ```
 
-**Examples:**
+**Events (ESP32 → App):**
 
-- ESP32 → App: `DATA CO2=400.12;TMP=24.50;HUM=40.10`
-- ESP32 → App: `WHOIS ID=ESP32_01;ORG=INGV;FW=1.0`
-- App → ESP32: `START_ACQUISITION`
-- App → ESP32: `STOP_ACQUISITION`
+- `DATA CO2=400.12;TMP=24.50;HUM=40.10` - Real-time sensor readings
+- `WHOIS ID=ESP32_01;ORG=INGV;FW=1.0` - Device identification
+- `ACQUISITION_STATE <0|1>` - Confirmation of recording state
+- `SETTINGS offset=0;multiplier=1` - Current calibration settings
+- `HW_CALIBRATION_REF <val>` - Current hardware calibration reference
+- `ERROR <message>` - Error reporting
+
+**Commands (App → ESP32):**
+
+- `START_ACQUISITION` - Start recording data
+- `STOP_ACQUISITION` - Stop recording data
+- `GET_ACQUISITION_STATE` - Query current recording state
+- `GET_SETTINGS` / `SET_SETTINGS <params>` - Manage software calibration
+- `GET_HW_CALIBRATION_REF` / `SET_HW_CALIBRATION_REF <val>` - Manage hardware calibration
+- `DISCONNECT` - Gracefully close connection
 
 ## Installation
 
@@ -110,24 +126,33 @@ pnpm tauri build
 ### Frontend (Vue 3 + TypeScript)
 
 - **Components**: Modular Vue components for different views and functionality
-- **Composables**: Reusable composition functions for BLE scanning and data handling
-- **State Management**: Pinia for application state management
-- **UI Framework**: TailwindCSS with custom components
+- **State Management**: Pinia for application state
+- **UI Framework**: TailwindCSS v4 + shadcn/vue (reka-ui)
+- **Charts**: Unovis
+- **Maps**: Leaflet
 
 ### Key Views
 
 - **Dashboard**: Main interface for device connection and data visualization
-- **Analyze**: Data analysis tools with regression calculations
-- **Map**: Interactive map showing measurement locations
+- **Analyze**:
+  - **Data View**: Visualize session data with brush selection
+  - **Flux Analysis**: Calculate slope (ppm/s) and R² for selected ranges
+- **Settings**:
+  - **Appearance**: Dark/Light mode
+  - **Storage**: Configure data save location
+  - **Device**: Manage CO₂ calibration (Software & Hardware)
 - **Console**: Raw command interface for ESP32 communication
 
 ## Data Export
 
 The application exports data in CSV format:
 
-- **Session Data**: Complete acquisition sessions with timestamps and sensor readings
-- **Flux Data**: Analysis results including slope and R² values saved to `flux_data.csv`
-- **GPS Data**: Location coordinates for mapping functionality
+- **Session Data**: Complete acquisition sessions (`YYYY-MM-DD-sensor-1.csv`)
+  - Includes raw readings: Timestamp, GPS, CO₂, Temp, Humidity
+  - Includes Metadata header with session stats (Avg/Min/Max) and active calibration values
+- **Flux Data**: Analysis results saved to `flux_data.csv`
+  - Appends new rows for each analysis performed
+  - Columns: Timestamp, Sensor, Location, CO₂ Slope, R², Min/Max stats, Calibration used
 
 ## BLE Device Identification
 
@@ -154,24 +179,35 @@ For Android emulator testing:
 ~/Android/Sdk/emulator/emulator -avd Medium_Phone_API_36.1
 ```
 
+### Mock Mode
+
+To develop without a physical device, enable Mock Mode in `.env`:
+
+```bash
+VITE_USE_MOCK=true
+```
+
 ## Technology Stack
 
 ### Frontend
 
-- **Vue 3** with Composition API and `<script setup>`
-- **TypeScript** for type safety
-- **TailwindCSS** for styling
-- **Pinia** for state management
-- **Leaflet** for mapping functionality
-- **PapaParse** for CSV handling
+- **Vue 3**
+- **TypeScript**
+- **TailwindCSS v4**
+- **Pinia**
+- **Unovis** (Charts)
+- **Leaflet** (Maps)
+- **PapaParse** (CSV)
 
 ### Backend (Tauri)
 
-- **Rust** for native performance
-- **Tauri 2** for cross-platform deployment
-- **BLE Plugin** for Bluetooth communication
-- **Geolocation Plugin** for GPS functionality
-- **File System Plugin** for data export
+- **Rust**
+- **Tauri 2**
+- **Plugins**:
+  - `@mnlphlp/plugin-blec` (BLE)
+  - `@tauri-apps/plugin-geolocation` (GPS)
+  - `@tauri-apps/plugin-fs` / `tauri-plugin-android-fs-api` (File System)
+  - `@tauri-apps/plugin-os` (Platform detection)
 
 ## Contributing
 
