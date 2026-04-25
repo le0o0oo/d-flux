@@ -68,6 +68,7 @@ function buildCsvContent(rows: SensorData[], sensorName: string) {
     ["Sensor", sensorName],
     ["Session Start", new Date(startTs).toISOString()],
     ["Session End", new Date(endTs).toISOString()],
+    ["Duration (s)", (endTs - startTs) / 1000],
     ["Samples", rows.length],
     ["Avg CO2 (ppm)", formatStatValue(co2Stats.avg)],
     ["Min CO2 (ppm)", formatStatValue(co2Stats.min)],
