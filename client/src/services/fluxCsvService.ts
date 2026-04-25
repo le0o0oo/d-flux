@@ -11,6 +11,7 @@ const CSV_HEADER = [
   "Timestamp",
   "Date",
   "Sensor",
+  "Selection Duration (s)",
   "Longitude",
   "Latitude",
   "CO₂ Slope",
@@ -29,6 +30,7 @@ export interface FluxRow {
   timestamp: number;
   date: string;
   sensorName: string;
+  selectionDurationSeconds: number;
   longitude: number;
   latitude: number;
   co2Slope: number;
@@ -52,6 +54,13 @@ function minMax(data: SensorData[], key: "co2" | "temperature" | "humidity") {
   const vals = data.map((d) => Number(d[key])).filter(Number.isFinite);
   if (vals.length === 0) return { min: 0, max: 0 };
   return { min: Math.min(...vals), max: Math.max(...vals) };
+}
+
+function timestampDurationSeconds(start: number, end: number): number {
+  const delta = Math.abs(end - start);
+  const largestTimestamp = Math.max(Math.abs(start), Math.abs(end));
+  const isEpochMilliseconds = largestTimestamp > 1_000_000_000_000;
+  return +(isEpochMilliseconds ? delta / 1000 : delta).toFixed(3);
 }
 
 function buildFluxRow(
@@ -98,6 +107,10 @@ function buildFluxRow(
     timestamp: now.getTime(),
     date: now.toISOString(),
     sensorName,
+    selectionDurationSeconds: timestampDurationSeconds(
+      Number(selected[0].timestamp),
+      Number(selected[selected.length - 1].timestamp),
+    ),
     longitude,
     latitude,
     co2Slope: +(regression.slope * 1000).toFixed(
@@ -120,6 +133,7 @@ function formatRow(row: FluxRow): string {
     row.timestamp,
     row.date,
     row.sensorName,
+    row.selectionDurationSeconds,
     row.longitude,
     row.latitude,
     row.co2Slope,
@@ -172,25 +186,31 @@ export async function saveFluxData(params: {
 
 function parseRow(line: string): FluxRow | null {
   const cols = line.split(",");
-  if (cols.length < 13) return null;
+  if (cols.length < 15) return null;
 
-  const parsedMultiplier = Number(cols[13] ?? 1);
-  const parsedOffset = Number(cols[14] ?? 0);
+  const hasDurationColumn = cols.length >= 16;
+  const colOffset = hasDurationColumn ? 1 : 0;
+
+  const parsedDuration = Number(hasDurationColumn ? cols[3] : 0);
+  const parsedMultiplier = Number(cols[13 + colOffset] ?? 1);
+  const parsedOffset = Number(cols[14 + colOffset] ?? 0);
 
   const row: FluxRow = {
     timestamp: Number(cols[0]),
     date: cols[1],
     sensorName: String(cols[2]),
-    longitude: Number(cols[3]),
-    latitude: Number(cols[4]),
-    co2Slope: Number(cols[5]),
-    co2R2: Number(cols[6]),
-    co2Min: Number(cols[7]),
-    co2Max: Number(cols[8]),
-    tempMin: Number(cols[9]),
-    tempMax: Number(cols[10]),
-    humMin: Number(cols[11]),
-    humMax: Number(cols[12]),
+    selectionDurationSeconds:
+      Number.isFinite(parsedDuration) && parsedDuration >= 0 ? parsedDuration : 0,
+    longitude: Number(cols[3 + colOffset]),
+    latitude: Number(cols[4 + colOffset]),
+    co2Slope: Number(cols[5 + colOffset]),
+    co2R2: Number(cols[6 + colOffset]),
+    co2Min: Number(cols[7 + colOffset]),
+    co2Max: Number(cols[8 + colOffset]),
+    tempMin: Number(cols[9 + colOffset]),
+    tempMax: Number(cols[10 + colOffset]),
+    humMin: Number(cols[11 + colOffset]),
+    humMax: Number(cols[12 + colOffset]),
     co2Multiplier: Number.isFinite(parsedMultiplier) ? parsedMultiplier : 1,
     co2Offset: Number.isFinite(parsedOffset) ? parsedOffset : 0,
   };
