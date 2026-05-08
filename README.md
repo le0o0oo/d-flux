@@ -35,6 +35,13 @@ This monorepo contains the entire source code for the project:
 
 To get the system running, you will need to set up both the hardware and the client application. Please refer to the specific documentation for each component:
 
+### 🏠 Accumulation chamber (IoT-AC)
+
+Documentation for the low-cost IoT-based accumulation chamber.
+Assembly, chamber specs, and 3D-printable housing files are maintained separately:
+
+[**IoT-AC documentation →**](https://github.com/giancarlotamburello/IoT-AC)
+
 ### 📱 Client Application
 
 Build and run the desktop/mobile app.
