@@ -1,3 +1,15 @@
+<a href="https://www.ingv.it/" target="_blank" rel="noopener noreferrer">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/giancarlotamburello/IoT-AC/blob/main/INGV_LOGO_STESO_SX_gray.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/giancarlotamburello/IoT-AC/blob/main/INGV_LOGO_STESO_SX.svg">
+  <img alt="Logo" src="https://github.com/giancarlotamburello/IoT-AC/blob/main/INGV_LOGO_STESO_SX.svg" width="600" align="left">
+</picture>
+</a>
+
+<br></br>
+<br></br>
+<br></br>
+
 # D Flux ESP32 Acquisition Firmware
 
 Firmware for the ESP32-based probe used by the D Flux application to capture
